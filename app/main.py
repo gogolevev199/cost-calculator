@@ -3,8 +3,12 @@ from pathlib import Path
 
 import psycopg2
 from fastapi import FastAPI
+from fastapi.templating import Jinja2Templates
+from fastapi import Request
+from fastapi.responses import HTMLResponse
 
 app = FastAPI()
+templates = Jinja2Templates(directory="templates")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
@@ -32,10 +36,33 @@ execute_sql_file("schema.sql")
 execute_sql_file("seed.sql")
 
 
-@app.get("/")
-def home():
-    return {"status": "Cost calculator 3.1 running"}
+@app.get("/", response_class=HTMLResponse)
+def home(request: Request):
 
+    with conn.cursor() as cursor:
+
+        cursor.execute("SELECT COUNT(*) FROM materials")
+        materials_count = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM customers")
+        customers_count = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM transport_schemes")
+        transport_schemes_count = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM recipes")
+        recipes_count = cursor.fetchone()[0]
+
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {
+            "request": request,
+            "materials_count": materials_count,
+            "customers_count": customers_count,
+            "transport_schemes_count": transport_schemes_count,
+            "recipes_count": recipes_count
+        }
+    )
 
 @app.get("/health")
 def health():

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<h1>Главная</h1>
+<p class="muted">Система готова к работе. Ниже быстрый обзор состояния.</p>
+
+<div class="form-grid" style="margin-top: 20px;">
+    <div class="card" style="padding:16px;">
+        <h3>Сырье</h3>
+        <p style="font-size:28px; margin: 10px 0;">{{ materials_count }}</p>
+        <p class="muted">Позиций в справочнике</p>
+    </div>
+
+    <div class="card" style="padding:16px;">
+        <h3>Потребители</h3>
+        <p style="font-size:28px; margin: 10px 0;">{{ customers_count }}</p>
+        <p class="muted">Потребителей в базе</p>
+    </div>
+
+    <div class="card" style="padding:16px;">
+        <h3>Транспортные схемы</h3>
+        <p style="font-size:28px; margin: 10px 0;">{{ transport_schemes_count }}</p>
+        <p class="muted">Доступных схем перевозки</p>
+    </div>
+
+    <div class="card" style="padding:16px;">
+        <h3>Рецептуры</h3>
+        <p style="font-size:28px; margin: 10px 0;">{{ recipes_count }}</p>
+        <p class="muted">Заведено рецептур</p>
+    </div>
+</div>
+
+<div style="margin-top: 24px;">
+    <h3>Что дальше</h3>
+    <p>Следующим шагом подключим страницы справочников и начнем с раздела «Сырье».</p>
+</div>
+{% endblock %}
