@@ -587,3 +587,115 @@ def transport_rate_create(
         )
 
     return RedirectResponse(url="/transport-page", status_code=303)
+@app.get("/transport-rates/{rate_id}/edit", response_class=HTMLResponse)
+def transport_rate_edit_page(request: Request, rate_id: str):
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, name FROM customers ORDER BY name")
+        customer_rows = cursor.fetchall()
+
+        cursor.execute("SELECT id, name FROM transport_schemes ORDER BY name")
+        scheme_rows = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT
+                id,
+                customer_id,
+                transport_scheme_id,
+                price,
+                currency,
+                price_per,
+                valid_from,
+                valid_to,
+                includes_loading,
+                includes_unloading,
+                includes_packaging,
+                notes
+            FROM transport_rate_history
+            WHERE id = %s
+            """,
+            (rate_id,)
+        )
+        row = cursor.fetchone()
+
+    if not row:
+        return RedirectResponse(url="/transport-page", status_code=303)
+
+    customers = [{"id": r[0], "name": r[1]} for r in customer_rows]
+    schemes = [{"id": r[0], "name": r[1]} for r in scheme_rows]
+
+    rate = {
+        "id": row[0],
+        "customer_id": row[1],
+        "transport_scheme_id": row[2],
+        "price": float(row[3]),
+        "currency": row[4],
+        "price_per": row[5],
+        "valid_from": str(row[6]) if row[6] else "",
+        "valid_to": str(row[7]) if row[7] else "",
+        "includes_loading": row[8],
+        "includes_unloading": row[9],
+        "includes_packaging": row[10],
+        "notes": row[11] or "",
+    }
+
+    return templates.TemplateResponse(
+        request,
+        "transport_rate_form.html",
+        {
+            "customers": customers,
+            "schemes": schemes,
+            "rate": rate
+        }
+    )
+
+
+@app.post("/transport-rates/{rate_id}/edit")
+def transport_rate_update(
+    rate_id: str,
+    customer_id: str = Form(...),
+    transport_scheme_id: str = Form(...),
+    price: float = Form(...),
+    currency: str = Form("RUB"),
+    price_per: str = Form("trip"),
+    valid_from: str = Form(...),
+    valid_to: str = Form(""),
+    includes_loading: str | None = Form(None),
+    includes_unloading: str | None = Form(None),
+    includes_packaging: str | None = Form(None),
+    notes: str = Form("")
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE transport_rate_history
+            SET customer_id = %s,
+                transport_scheme_id = %s,
+                price = %s,
+                currency = %s,
+                price_per = %s,
+                valid_from = %s,
+                valid_to = %s,
+                includes_loading = %s,
+                includes_unloading = %s,
+                includes_packaging = %s,
+                notes = %s
+            WHERE id = %s
+            """,
+            (
+                customer_id,
+                transport_scheme_id,
+                price,
+                currency,
+                price_per,
+                valid_from,
+                valid_to if valid_to else None,
+                includes_loading is not None,
+                includes_unloading is not None,
+                includes_packaging is not None,
+                notes,
+                rate_id
+            )
+        )
+
+    return RedirectResponse(url="/transport-page", status_code=303)
