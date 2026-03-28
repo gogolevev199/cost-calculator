@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Потребители{% endblock %}
+
+{% block content %}
+<h1>Потребители</h1>
+<p class="muted">Справочник клиентов для расчетов и логистики.</p>
+
+<div style="margin: 16px 0 20px 0;">
+    <a class="btn" href="/customers/new">Добавить потребителя</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Название</th>
+            <th>Страна</th>
+            <th>Город</th>
+            <th>Отсрочка (дни)</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in customers %}
+        <tr>
+            <td>{{ c.name }}</td>
+            <td>{{ c.country or "—" }}</td>
+            <td>{{ c.city or "—" }}</td>
+            <td>{{ c.delay }}</td>
+            <td>
+                <a href="/customers/{{ c.id }}/edit">Редактировать</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not customers %}
+<p class="muted" style="margin-top:16px;">Потребители пока не добавлены.</p>
+{% endif %}
+{% endblock %}

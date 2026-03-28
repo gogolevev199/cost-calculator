@@ -320,3 +320,30 @@ def material_price_create(
         url=f"/materials/{material_id}/prices",
         status_code=303
     )
+@app.get("/customers-page", response_class=HTMLResponse)
+def customers_page(request: Request):
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT id, name, country, city, default_payment_delay_days
+            FROM customers
+            ORDER BY name
+        """)
+        rows = cursor.fetchall()
+
+    customers = []
+    for row in rows:
+        customers.append({
+            "id": row[0],
+            "name": row[1],
+            "country": row[2],
+            "city": row[3],
+            "delay": row[4],
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "customers.html",
+        {
+            "customers": customers
+        }
+    )
