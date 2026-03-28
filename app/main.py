@@ -1551,3 +1551,40 @@ def packaging_page(request: Request):
             "packaging_types": packaging_types
         }
     )
+@app.get("/packaging-types/new", response_class=HTMLResponse)
+def packaging_type_new_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "packaging_type_form.html",
+        {}
+    )
+
+
+@app.post("/packaging-types/new")
+def packaging_type_create(
+    name: str = Form(...),
+    code: str = Form(""),
+    capacity_value: float | None = Form(None),
+    capacity_unit: str = Form(""),
+    cost_per_ton: float = Form(...)
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO packaging_types
+            (name, code, capacity_value, capacity_unit, cost_per_ton)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (
+                name,
+                code,
+                capacity_value,
+                capacity_unit,
+                cost_per_ton
+            )
+        )
+
+    return RedirectResponse(
+        url="/packaging-page",
+        status_code=303
+    )
