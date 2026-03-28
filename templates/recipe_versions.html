@@ -32,6 +32,8 @@
             <td>{{ v.created_at }}</td>
             <td>
                 <a href="/recipe-versions/{{ v.id }}/items">Состав</a>
+                 |
+                <a href="/recipe-versions/{{ v.id }}/calculate">Расчет</a>
             </td>
         </tr>
         {% endfor %}

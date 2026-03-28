@@ -1395,3 +1395,130 @@ def process_cost_create(
         url=f"/processes/{process_id}/costs",
         status_code=303
     )
+@app.get("/recipe-versions/{version_id}/calculate", response_class=HTMLResponse)
+def recipe_version_calculate_page(
+    request: Request,
+    version_id: str,
+    overhead_percent: float = 20.0
+):
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                rv.id,
+                rv.version_number,
+                rv.version_name,
+                r.id,
+                r.name
+            FROM recipe_versions rv
+            JOIN recipes r ON r.id = rv.recipe_id
+            WHERE rv.id = %s
+        """, (version_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            return RedirectResponse("/recipes-page", status_code=303)
+
+        version = {
+            "id": row[0],
+            "version_number": row[1],
+            "version_name": row[2]
+        }
+
+        recipe = {
+            "id": row[3],
+            "name": row[4]
+        }
+
+        cursor.execute("""
+            SELECT
+                ri.id,
+                m.id,
+                m.name,
+                ri.quantity,
+                COALESCE(mp.price, m.default_price, 0) AS material_price
+            FROM recipe_items ri
+            JOIN materials m ON m.id = ri.material_id
+            LEFT JOIN LATERAL (
+                SELECT price
+                FROM material_price_history
+                WHERE material_id = m.id
+                  AND valid_to IS NULL
+                ORDER BY valid_from DESC
+                LIMIT 1
+            ) mp ON TRUE
+            WHERE ri.recipe_version_id = %s
+            ORDER BY m.name
+        """, (version_id,))
+        item_rows = cursor.fetchall()
+
+    items = []
+    direct_cost = 0.0
+
+    for row in item_rows:
+        item_id = row[0]
+        material_name = row[2]
+        base_quantity = float(row[3])
+        material_price = float(row[4] or 0)
+
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                    rip.loss_coefficient,
+                    COALESCE(pch.cost, p.default_cost, 0) AS process_cost
+                FROM recipe_item_processes rip
+                JOIN processes p ON p.id = rip.process_id
+                LEFT JOIN LATERAL (
+                    SELECT cost
+                    FROM process_cost_history
+                    WHERE process_id = p.id
+                      AND valid_to IS NULL
+                    ORDER BY valid_from DESC
+                    LIMIT 1
+                ) pch ON TRUE
+                WHERE rip.recipe_item_id = %s
+                ORDER BY rip.sort_order, p.name
+            """, (item_id,))
+            process_rows = cursor.fetchall()
+
+        total_loss = 1.0
+        total_process_cost = 0.0
+
+        for p in process_rows:
+            total_loss *= float(p[0] or 1)
+            total_process_cost += float(p[1] or 0)
+
+        final_quantity = base_quantity * total_loss
+        material_cost = final_quantity * material_price
+        process_cost = final_quantity * total_process_cost
+        total_item_cost = material_cost + process_cost
+
+        direct_cost += total_item_cost
+
+        items.append({
+            "material_name": material_name,
+            "base_quantity": round(base_quantity, 6),
+            "total_loss": round(total_loss, 6),
+            "final_quantity": round(final_quantity, 6),
+            "material_price": round(material_price, 2),
+            "material_cost": round(material_cost, 2),
+            "total_process_cost": round(total_process_cost, 2),
+            "process_cost": round(process_cost, 2),
+            "total_cost": round(total_item_cost, 2),
+        })
+
+    overhead_cost = direct_cost * overhead_percent / 100.0
+    total_cost = direct_cost + overhead_cost
+
+    return templates.TemplateResponse(
+        request,
+        "recipe_version_calculation.html",
+        {
+            "recipe": recipe,
+            "version": version,
+            "items": items,
+            "overhead_percent": overhead_percent,
+            "direct_cost": round(direct_cost, 2),
+            "overhead_cost": round(overhead_cost, 2),
+            "total_cost": round(total_cost, 2),
+        }
+    )
