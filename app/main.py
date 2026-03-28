@@ -1239,3 +1239,35 @@ def processes_page(request: Request):
             "processes": processes
         }
     )
+@app.get("/processes/new", response_class=HTMLResponse)
+def process_new_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "process_form.html",
+        {}
+    )
+
+
+@app.post("/processes/new")
+def process_create(
+    name: str = Form(...),
+    code: str = Form(""),
+    description: str = Form("")
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO processes (name, code, description)
+            VALUES (%s,%s,%s)
+            """,
+            (
+                name,
+                code,
+                description
+            )
+        )
+
+    return RedirectResponse(
+        url="/processes-page",
+        status_code=303
+    )
