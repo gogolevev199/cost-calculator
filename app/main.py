@@ -1271,3 +1271,51 @@ def process_create(
         url="/processes-page",
         status_code=303
     )
+@app.get("/processes/{process_id}/costs", response_class=HTMLResponse)
+def process_costs_page(request: Request, process_id: str):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id, name FROM processes WHERE id = %s",
+            (process_id,)
+        )
+        process_row = cursor.fetchone()
+
+        if not process_row:
+            return RedirectResponse("/processes-page", status_code=303)
+
+        process = {
+            "id": process_row[0],
+            "name": process_row[1]
+        }
+
+        cursor.execute("""
+            SELECT
+                cost,
+                currency,
+                valid_from,
+                valid_to,
+                comment
+            FROM process_cost_history
+            WHERE process_id = %s
+            ORDER BY valid_from DESC
+        """, (process_id,))
+        rows = cursor.fetchall()
+
+    costs = []
+    for row in rows:
+        costs.append({
+            "cost": float(row[0]),
+            "currency": row[1],
+            "valid_from": str(row[2]),
+            "valid_to": str(row[3]) if row[3] else None,
+            "comment": row[4]
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "process_costs.html",
+        {
+            "process": process,
+            "costs": costs
+        }
+    )
