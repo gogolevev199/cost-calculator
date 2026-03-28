@@ -1040,3 +1040,80 @@ def recipe_item_create(
         url=f"/recipe-versions/{version_id}/items",
         status_code=303
     )
+
+@app.get("/recipe-items/{item_id}/processes", response_class=HTMLResponse)
+def recipe_item_processes_page(request: Request, item_id: str):
+
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                ri.id,
+                ri.quantity,
+                m.name,
+                rv.id,
+                rv.version_number,
+                rv.version_name,
+                r.id,
+                r.name
+            FROM recipe_items ri
+            JOIN materials m ON m.id = ri.material_id
+            JOIN recipe_versions rv ON rv.id = ri.recipe_version_id
+            JOIN recipes r ON r.id = rv.recipe_id
+            WHERE ri.id = %s
+        """, (item_id,))
+
+        row = cursor.fetchone()
+
+        if not row:
+            return RedirectResponse("/recipes-page", status_code=303)
+
+        item = {
+            "id": row[0],
+            "quantity": float(row[1]),
+            "material_name": row[2]
+        }
+
+        version = {
+            "id": row[3],
+            "version_number": row[4],
+            "version_name": row[5]
+        }
+
+        recipe = {
+            "id": row[6],
+            "name": row[7]
+        }
+
+        cursor.execute("""
+            SELECT
+                rip.id,
+                rip.sort_order,
+                p.name,
+                rip.loss_coefficient
+            FROM recipe_item_processes rip
+            JOIN processes p ON p.id = rip.process_id
+            WHERE rip.recipe_item_id = %s
+            ORDER BY rip.sort_order, p.name
+        """, (item_id,))
+
+        process_rows = cursor.fetchall()
+
+    processes = []
+    for p in process_rows:
+        processes.append({
+            "id": p[0],
+            "sort_order": p[1],
+            "process_name": p[2],
+            "loss_coefficient": float(p[3])
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "recipe_item_processes.html",
+        {
+            "recipe": recipe,
+            "version": version,
+            "item": item,
+            "processes": processes
+        }
+    )

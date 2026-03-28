@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Переделы компонента{% endblock %}
+
+{% block content %}
+<h1>Переделы компонента</h1>
+<p class="muted">
+    Рецептура: <strong>{{ recipe.name }}</strong><br>
+    Версия: <strong>{{ version.version_number }}</strong>{% if version.version_name %} — {{ version.version_name }}{% endif %}<br>
+    Компонент: <strong>{{ item.material_name }}</strong> ({{ item.quantity }})
+</p>
+
+<div style="margin: 16px 0 20px 0;">
+    <a class="btn" href="/recipe-items/{{ item.id }}/processes/new">Добавить передел</a>
+    <a href="/recipe-versions/{{ version.id }}/items" style="margin-left: 12px;">Назад к составу</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Порядок</th>
+            <th>Передел</th>
+            <th>Коэф. потерь</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in processes %}
+        <tr>
+            <td>{{ p.sort_order }}</td>
+            <td>{{ p.process_name }}</td>
+            <td>{{ p.loss_coefficient }}</td>
+            <td>
+                <a href="/recipe-item-processes/{{ p.id }}/edit">Редактировать</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not processes %}
+<p class="muted" style="margin-top:16px;">Переделы для этого компонента пока не добавлены.</p>
+{% endif %}
+{% endblock %}
