@@ -347,3 +347,47 @@ def customers_page(request: Request):
             "customers": customers
         }
     )
+@app.get("/customers/new", response_class=HTMLResponse)
+def customer_new_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "customer_form.html",
+        {}
+    )
+
+
+@app.post("/customers/new")
+def customer_create(
+    name: str = Form(...),
+    code: str = Form(""),
+    country: str = Form(""),
+    region: str = Form(""),
+    city: str = Form(""),
+    address: str = Form(""),
+    default_payment_delay_days: int = Form(0),
+    notes: str = Form("")
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO customers
+            (name, code, country, region, city, address,
+             default_payment_delay_days, notes)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            """,
+            (
+                name,
+                code,
+                country,
+                region,
+                city,
+                address,
+                default_payment_delay_days,
+                notes
+            )
+        )
+
+    return RedirectResponse(
+        url="/customers-page",
+        status_code=303
+    )

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить потребителя{% endblock %}
+
+{% block content %}
+<h1>Добавить потребителя</h1>
+<p class="muted">Создание нового клиента для расчетов и логистики.</p>
+
+<form method="post" action="/customers/new" style="margin-top: 20px;">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Название</label>
+            <input type="text" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <label>Код</label>
+            <input type="text" name="code">
+        </div>
+
+        <div class="form-group">
+            <label>Страна</label>
+            <input type="text" name="country">
+        </div>
+
+        <div class="form-group">
+            <label>Регион</label>
+            <input type="text" name="region">
+        </div>
+
+        <div class="form-group">
+            <label>Город</label>
+            <input type="text" name="city">
+        </div>
+
+        <div class="form-group">
+            <label>Адрес</label>
+            <input type="text" name="address">
+        </div>
+
+        <div class="form-group">
+            <label>Стандартная отсрочка оплаты, дней</label>
+            <input type="number" name="default_payment_delay_days" value="0" min="0">
+        </div>
+
+        <div class="form-group">
+            <label>Комментарий</label>
+            <textarea name="notes" rows="3"></textarea>
+        </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <button class="btn" type="submit">Сохранить</button>
+        <a href="/customers-page" style="margin-left: 12px;">Отмена</a>
+    </div>
+</form>
+{% endblock %}
