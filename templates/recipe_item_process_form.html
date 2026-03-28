@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить передел{% endblock %}
+
+{% block content %}
+<h1>Добавить передел</h1>
+<p class="muted">
+    Компонент: <strong>{{ item.material_name }}</strong><br>
+    Версия: <strong>{{ version.version_number }}</strong>{% if version.version_name %} — {{ version.version_name }}{% endif %}
+</p>
+
+<form method="post" action="/recipe-items/{{ item.id }}/processes/new" style="margin-top: 20px;">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Передел</label>
+            <select name="process_id" required>
+                <option value="">Выберите передел</option>
+                {% for p in processes %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Порядок</label>
+            <input type="number" name="sort_order" min="1" value="{{ next_sort_order }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Коэф. потерь</label>
+            <input type="number" step="0.000001" name="loss_coefficient" value="1.000000" required>
+        </div>
+
+        <div class="form-group">
+            <label>Комментарий</label>
+            <textarea name="comment" rows="3"></textarea>
+        </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <button class="btn" type="submit">Сохранить передел</button>
+        <a href="/recipe-items/{{ item.id }}/processes" style="margin-left: 12px;">Отмена</a>
+    </div>
+</form>
+{% endblock %}

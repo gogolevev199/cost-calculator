@@ -1117,3 +1117,85 @@ def recipe_item_processes_page(request: Request, item_id: str):
             "processes": processes
         }
     )
+@app.get("/recipe-items/{item_id}/processes/new", response_class=HTMLResponse)
+def recipe_item_process_new_page(request: Request, item_id: str):
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                ri.id,
+                m.name,
+                rv.id,
+                rv.version_number,
+                rv.version_name
+            FROM recipe_items ri
+            JOIN materials m ON m.id = ri.material_id
+            JOIN recipe_versions rv ON rv.id = ri.recipe_version_id
+            WHERE ri.id = %s
+        """, (item_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            return RedirectResponse("/recipes-page", status_code=303)
+
+        item = {
+            "id": row[0],
+            "material_name": row[1]
+        }
+
+        version = {
+            "id": row[2],
+            "version_number": row[3],
+            "version_name": row[4]
+        }
+
+        cursor.execute("""
+            SELECT id, name
+            FROM processes
+            WHERE is_active = TRUE
+            ORDER BY name
+        """)
+        process_rows = cursor.fetchall()
+
+        cursor.execute("""
+            SELECT COALESCE(MAX(sort_order), 0) + 1
+            FROM recipe_item_processes
+            WHERE recipe_item_id = %s
+        """, (item_id,))
+        next_sort_order = cursor.fetchone()[0]
+
+    processes = [{"id": r[0], "name": r[1]} for r in process_rows]
+
+    return templates.TemplateResponse(
+        request,
+        "recipe_item_process_form.html",
+        {
+            "item": item,
+            "version": version,
+            "processes": processes,
+            "next_sort_order": next_sort_order
+        }
+    )
+
+
+@app.post("/recipe-items/{item_id}/processes/new")
+def recipe_item_process_create(
+    item_id: str,
+    process_id: str = Form(...),
+    sort_order: int = Form(...),
+    loss_coefficient: float = Form(...),
+    comment: str = Form("")
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO recipe_item_processes
+            (recipe_item_id, process_id, sort_order, loss_coefficient, comment)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (item_id, process_id, sort_order, loss_coefficient, comment)
+        )
+
+    return RedirectResponse(
+        url=f"/recipe-items/{item_id}/processes",
+        status_code=303
+    )
