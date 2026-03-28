@@ -968,3 +968,75 @@ def recipe_version_items_page(request: Request, version_id: str):
             "items": items
         }
     )
+@app.get("/recipe-versions/{version_id}/items/new", response_class=HTMLResponse)
+def recipe_item_new_page(request: Request, version_id: str):
+
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                rv.id,
+                rv.version_number,
+                rv.version_name,
+                r.id,
+                r.name
+            FROM recipe_versions rv
+            JOIN recipes r ON r.id = rv.recipe_id
+            WHERE rv.id = %s
+        """, (version_id,))
+
+        row = cursor.fetchone()
+
+        if not row:
+            return RedirectResponse("/recipes-page", status_code=303)
+
+        version = {
+            "id": row[0],
+            "version_number": row[1],
+            "version_name": row[2]
+        }
+
+        recipe = {
+            "id": row[3],
+            "name": row[4]
+        }
+
+        cursor.execute("""
+            SELECT id, name
+            FROM materials
+            WHERE is_active = TRUE
+            ORDER BY name
+        """)
+        material_rows = cursor.fetchall()
+
+    materials = [{"id": r[0], "name": r[1]} for r in material_rows]
+
+    return templates.TemplateResponse(
+        request,
+        "recipe_item_form.html",
+        {
+            "recipe": recipe,
+            "version": version,
+            "materials": materials
+        }
+    )
+
+
+@app.post("/recipe-versions/{version_id}/items/new")
+def recipe_item_create(
+    version_id: str,
+    material_id: str = Form(...),
+    quantity: float = Form(...)
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO recipe_items (recipe_version_id, material_id, quantity)
+            VALUES (%s, %s, %s)
+            """,
+            (version_id, material_id, quantity)
+        )
+
+    return RedirectResponse(
+        url=f"/recipe-versions/{version_id}/items",
+        status_code=303
+    )

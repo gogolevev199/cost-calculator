@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить компонент{% endblock %}
+
+{% block content %}
+<h1>Добавить компонент</h1>
+<p class="muted">
+    Рецептура: <strong>{{ recipe.name }}</strong><br>
+    Версия: <strong>{{ version.version_number }}</strong>
+    {% if version.version_name %} — {{ version.version_name }}{% endif %}
+</p>
+
+<form method="post" action="/recipe-versions/{{ version.id }}/items/new" style="margin-top: 20px;">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Материал</label>
+            <select name="material_id" required>
+                <option value="">Выберите материал</option>
+                {% for m in materials %}
+                <option value="{{ m.id }}">{{ m.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Количество</label>
+            <input type="number" step="0.000001" name="quantity" required>
+        </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <button class="btn" type="submit">Сохранить компонент</button>
+        <a href="/recipe-versions/{{ version.id }}/items" style="margin-left: 12px;">Отмена</a>
+    </div>
+</form>
+{% endblock %}
