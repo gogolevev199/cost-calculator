@@ -832,3 +832,69 @@ def recipe_versions_page(request: Request, recipe_id: str):
             "versions": versions
         }
     )
+@app.get("/recipes/{recipe_id}/versions/new", response_class=HTMLResponse)
+def recipe_version_new_page(request: Request, recipe_id: str):
+
+    with conn.cursor() as cursor:
+
+        cursor.execute(
+            "SELECT id, name FROM recipes WHERE id = %s",
+            (recipe_id,)
+        )
+
+        recipe_row = cursor.fetchone()
+
+        if not recipe_row:
+            return RedirectResponse("/recipes-page", status_code=303)
+
+        recipe = {
+            "id": recipe_row[0],
+            "name": recipe_row[1]
+        }
+
+        cursor.execute("""
+            SELECT COALESCE(MAX(version_number),0) + 1
+            FROM recipe_versions
+            WHERE recipe_id = %s
+        """, (recipe_id,))
+
+        next_version_number = cursor.fetchone()[0]
+
+    return templates.TemplateResponse(
+        request,
+        "recipe_version_form.html",
+        {
+            "recipe": recipe,
+            "next_version_number": next_version_number
+        }
+    )
+
+
+@app.post("/recipes/{recipe_id}/versions/new")
+def recipe_version_create(
+    recipe_id: str,
+    version_number: int = Form(...),
+    version_name: str = Form(""),
+    status: str = Form("draft"),
+    comment: str = Form("")
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO recipe_versions
+            (recipe_id, version_number, version_name, status, comment)
+            VALUES (%s,%s,%s,%s,%s)
+            """,
+            (
+                recipe_id,
+                version_number,
+                version_name,
+                status,
+                comment
+            )
+        )
+
+    return RedirectResponse(
+        url=f"/recipes/{recipe_id}/versions",
+        status_code=303
+    )

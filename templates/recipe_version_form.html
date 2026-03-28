@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить версию рецептуры{% endblock %}
+
+{% block content %}
+<h1>Добавить версию рецептуры</h1>
+<p class="muted">Рецептура: <strong>{{ recipe.name }}</strong></p>
+
+<form method="post" action="/recipes/{{ recipe.id }}/versions/new" style="margin-top: 20px;">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Номер версии</label>
+            <input type="number" name="version_number" min="1" value="{{ next_version_number }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Название версии</label>
+            <input type="text" name="version_name">
+        </div>
+
+        <div class="form-group">
+            <label>Статус</label>
+            <select name="status">
+                <option value="draft">draft</option>
+                <option value="approved">approved</option>
+                <option value="archived">archived</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="grid-column: 1 / -1;">
+            <label>Комментарий</label>
+            <textarea name="comment" rows="4"></textarea>
+        </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <button class="btn" type="submit">Сохранить версию</button>
+        <a href="/recipes/{{ recipe.id }}/versions" style="margin-left: 12px;">Отмена</a>
+    </div>
+</form>
+{% endblock %}
