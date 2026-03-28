@@ -1,51 +1,51 @@
 {% extends "base.html" %}
 
-{% block title %}Добавить потребителя{% endblock %}
+{% block title %}{% if customer %}Редактировать потребителя{% else %}Добавить потребителя{% endif %}{% endblock %}
 
 {% block content %}
-<h1>Добавить потребителя</h1>
-<p class="muted">Создание нового клиента для расчетов и логистики.</p>
+<h1>{% if customer %}Редактировать потребителя{% else %}Добавить потребителя{% endif %}</h1>
+<p class="muted">Карточка клиента для расчетов и логистики.</p>
 
-<form method="post" action="/customers/new" style="margin-top: 20px;">
+<form method="post" action="{% if customer %}/customers/{{ customer.id }}/edit{% else %}/customers/new{% endif %}" style="margin-top: 20px;">
     <div class="form-grid">
         <div class="form-group">
             <label>Название</label>
-            <input type="text" name="name" required>
+            <input type="text" name="name" required value="{{ customer.name if customer else '' }}">
         </div>
 
         <div class="form-group">
             <label>Код</label>
-            <input type="text" name="code">
+            <input type="text" name="code" value="{{ customer.code if customer else '' }}">
         </div>
 
         <div class="form-group">
             <label>Страна</label>
-            <input type="text" name="country">
+            <input type="text" name="country" value="{{ customer.country if customer else '' }}">
         </div>
 
         <div class="form-group">
             <label>Регион</label>
-            <input type="text" name="region">
+            <input type="text" name="region" value="{{ customer.region if customer else '' }}">
         </div>
 
         <div class="form-group">
             <label>Город</label>
-            <input type="text" name="city">
+            <input type="text" name="city" value="{{ customer.city if customer else '' }}">
         </div>
 
         <div class="form-group">
             <label>Адрес</label>
-            <input type="text" name="address">
+            <input type="text" name="address" value="{{ customer.address if customer else '' }}">
         </div>
 
         <div class="form-group">
             <label>Стандартная отсрочка оплаты, дней</label>
-            <input type="number" name="default_payment_delay_days" value="0" min="0">
+            <input type="number" name="default_payment_delay_days" value="{{ customer.default_payment_delay_days if customer else 0 }}" min="0">
         </div>
 
         <div class="form-group">
             <label>Комментарий</label>
-            <textarea name="notes" rows="3"></textarea>
+            <textarea name="notes" rows="3">{{ customer.notes if customer else '' }}</textarea>
         </div>
     </div>
 

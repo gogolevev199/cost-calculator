@@ -391,3 +391,81 @@ def customer_create(
         url="/customers-page",
         status_code=303
     )
+@app.get("/customers/{customer_id}/edit", response_class=HTMLResponse)
+def customer_edit_page(request: Request, customer_id: str):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, name, code, country, region, city, address,
+                   default_payment_delay_days, notes
+            FROM customers
+            WHERE id = %s
+            """,
+            (customer_id,)
+        )
+        row = cursor.fetchone()
+
+    if not row:
+        return RedirectResponse(url="/customers-page", status_code=303)
+
+    customer = {
+        "id": row[0],
+        "name": row[1],
+        "code": row[2],
+        "country": row[3],
+        "region": row[4],
+        "city": row[5],
+        "address": row[6],
+        "default_payment_delay_days": row[7],
+        "notes": row[8],
+    }
+
+    return templates.TemplateResponse(
+        request,
+        "customer_form.html",
+        {
+            "customer": customer
+        }
+    )
+
+
+@app.post("/customers/{customer_id}/edit")
+def customer_update(
+    customer_id: str,
+    name: str = Form(...),
+    code: str = Form(""),
+    country: str = Form(""),
+    region: str = Form(""),
+    city: str = Form(""),
+    address: str = Form(""),
+    default_payment_delay_days: int = Form(0),
+    notes: str = Form("")
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE customers
+            SET name = %s,
+                code = %s,
+                country = %s,
+                region = %s,
+                city = %s,
+                address = %s,
+                default_payment_delay_days = %s,
+                notes = %s
+            WHERE id = %s
+            """,
+            (
+                name,
+                code,
+                country,
+                region,
+                city,
+                address,
+                default_payment_delay_days,
+                notes,
+                customer_id
+            )
+        )
+
+    return RedirectResponse(url="/customers-page", status_code=303)
