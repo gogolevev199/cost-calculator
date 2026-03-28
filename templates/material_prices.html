@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}История цен{% endblock %}
+
+{% block content %}
+<h1>История цен</h1>
+<p class="muted">Материал: <strong>{{ material.name }}</strong></p>
+
+<div style="margin: 16px 0 20px 0;">
+    <a class="btn" href="/materials/{{ material.id }}/prices/new">Добавить новую цену</a>
+    <a href="/materials-page" style="margin-left: 12px;">Назад к сырью</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Цена</th>
+            <th>Валюта</th>
+            <th>Дата начала</th>
+            <th>Дата окончания</th>
+            <th>Комментарий</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in prices %}
+        <tr>
+            <td>{{ item.price }}</td>
+            <td>{{ item.currency }}</td>
+            <td>{{ item.valid_from }}</td>
+            <td>{{ item.valid_to or "Активна" }}</td>
+            <td>{{ item.comment or "—" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not prices %}
+<p class="muted" style="margin-top:16px;">История цен пока пуста.</p>
+{% endif %}
+{% endblock %}

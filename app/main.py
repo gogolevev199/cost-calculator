@@ -190,3 +190,56 @@ def material_create(
         )
 
     return RedirectResponse(url="/materials-page", status_code=303)
+@app.get("/materials/{material_id}/prices", response_class=HTMLResponse)
+def material_prices(request: Request, material_id: str):
+
+    with conn.cursor() as cursor:
+
+        cursor.execute(
+            "SELECT id, name FROM materials WHERE id = %s",
+            (material_id,)
+        )
+
+        material_row = cursor.fetchone()
+
+        if not material_row:
+            return RedirectResponse("/materials-page", status_code=303)
+
+        material = {
+            "id": material_row[0],
+            "name": material_row[1]
+        }
+
+        cursor.execute("""
+            SELECT
+                price,
+                currency,
+                valid_from,
+                valid_to,
+                comment
+            FROM material_price_history
+            WHERE material_id = %s
+            ORDER BY valid_from DESC
+        """, (material_id,))
+
+        rows = cursor.fetchall()
+
+    prices = []
+
+    for row in rows:
+        prices.append({
+            "price": float(row[0]),
+            "currency": row[1],
+            "valid_from": str(row[2]),
+            "valid_to": str(row[3]) if row[3] else None,
+            "comment": row[4]
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "material_prices.html",
+        {
+            "material": material,
+            "prices": prices
+        }
+    )
