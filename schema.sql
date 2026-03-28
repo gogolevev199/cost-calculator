@@ -395,6 +395,9 @@ CREATE TABLE IF NOT EXISTS packaging_types (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE packaging_types
+ADD COLUMN IF NOT EXISTS package_price NUMERIC(18,2) NOT NULL DEFAULT 0;
+
 CREATE INDEX IF NOT EXISTS idx_packaging_types_name
     ON packaging_types(name);
 
