@@ -389,6 +389,7 @@ CREATE TABLE IF NOT EXISTS packaging_types (
     capacity_value NUMERIC(18,3),
     capacity_unit VARCHAR(50),
     cost_per_ton NUMERIC(18,2) NOT NULL DEFAULT 0,
+    package_price NUMERIC(18,2) NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()

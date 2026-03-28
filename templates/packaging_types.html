@@ -16,7 +16,8 @@
             <th>Название</th>
             <th>Код</th>
             <th>Вместимость</th>
-            <th>Стоимость, руб/т</th>
+            <th>Фасовка, руб/т</th>
+            <th>Упаковка, руб/ед.</th>
         </tr>
     </thead>
     <tbody>
@@ -32,6 +33,7 @@
                 {% endif %}
             </td>
             <td>{{ p.cost_per_ton }}</td>
+            <td>{{ p.package_price }}</td>
         </tr>
         {% endfor %}
     </tbody>

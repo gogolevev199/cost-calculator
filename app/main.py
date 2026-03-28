@@ -1526,7 +1526,7 @@ def recipe_version_calculate_page(
 def packaging_page(request: Request):
     with conn.cursor() as cursor:
         cursor.execute("""
-            SELECT id, name, code, capacity_value, capacity_unit, cost_per_ton
+            SELECT id, name, code, capacity_value, capacity_unit, cost_per_ton, package_price
             FROM packaging_types
             WHERE is_active = TRUE
             ORDER BY name
@@ -1542,6 +1542,7 @@ def packaging_page(request: Request):
             "capacity_value": float(row[3]) if row[3] is not None else None,
             "capacity_unit": row[4],
             "cost_per_ton": float(row[5]),
+            "package_price": float(row[6]),
         })
 
     return templates.TemplateResponse(
@@ -1566,21 +1567,23 @@ def packaging_type_create(
     code: str = Form(""),
     capacity_value: float | None = Form(None),
     capacity_unit: str = Form(""),
-    cost_per_ton: float = Form(...)
+    cost_per_ton: float = Form(...),
+    package_price: float = Form(...)
 ):
     with conn.cursor() as cursor:
         cursor.execute(
             """
             INSERT INTO packaging_types
-            (name, code, capacity_value, capacity_unit, cost_per_ton)
-            VALUES (%s, %s, %s, %s, %s)
+            (name, code, capacity_value, capacity_unit, cost_per_ton, package_price)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
             (
                 name,
                 code,
                 capacity_value,
                 capacity_unit,
-                cost_per_ton
+                cost_per_ton,
+                package_price
             )
         )
 
