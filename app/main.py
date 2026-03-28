@@ -243,3 +243,80 @@ def material_prices(request: Request, material_id: str):
             "prices": prices
         }
     )
+@app.get("/materials/{material_id}/prices/new", response_class=HTMLResponse)
+def material_price_new_page(request: Request, material_id: str):
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id, name FROM materials WHERE id = %s",
+            (material_id,)
+        )
+        material_row = cursor.fetchone()
+
+    if not material_row:
+        return RedirectResponse("/materials-page", status_code=303)
+
+    material = {
+        "id": material_row[0],
+        "name": material_row[1]
+    }
+
+    return templates.TemplateResponse(
+        request,
+        "material_price_form.html",
+        {
+            "material": material
+        }
+    )
+
+
+@app.post("/materials/{material_id}/prices/new")
+def material_price_create(
+    material_id: str,
+    price: float = Form(...),
+    currency: str = Form("RUB"),
+    valid_from: str = Form(...),
+    comment: str = Form("")
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id FROM materials WHERE id = %s",
+            (material_id,)
+        )
+        material_row = cursor.fetchone()
+
+        if not material_row:
+            return RedirectResponse("/materials-page", status_code=303)
+
+        cursor.execute(
+            """
+            UPDATE material_price_history
+            SET valid_to = %s::date - INTERVAL '1 day'
+            WHERE material_id = %s
+              AND valid_to IS NULL
+            """,
+            (valid_from, material_id)
+        )
+
+        cursor.execute(
+            """
+            INSERT INTO material_price_history
+            (material_id, price, currency, valid_from, valid_to, comment)
+            VALUES (%s, %s, %s, %s, NULL, %s)
+            """,
+            (material_id, price, currency, valid_from, comment)
+        )
+
+        cursor.execute(
+            """
+            UPDATE materials
+            SET default_price = %s
+            WHERE id = %s
+            """,
+            (price, material_id)
+        )
+
+    return RedirectResponse(
+        url=f"/materials/{material_id}/prices",
+        status_code=303
+    )
