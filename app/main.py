@@ -1199,3 +1199,43 @@ def recipe_item_process_create(
         url=f"/recipe-items/{item_id}/processes",
         status_code=303
     )
+@app.get("/processes-page", response_class=HTMLResponse)
+def processes_page(request: Request):
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                p.id,
+                p.name,
+                p.code,
+                pch.cost AS current_cost,
+                pch.valid_from AS cost_date
+            FROM processes p
+            LEFT JOIN LATERAL (
+                SELECT cost, valid_from
+                FROM process_cost_history
+                WHERE process_id = p.id
+                  AND valid_to IS NULL
+                ORDER BY valid_from DESC
+                LIMIT 1
+            ) pch ON TRUE
+            ORDER BY p.name
+        """)
+        rows = cursor.fetchall()
+
+    processes = []
+    for row in rows:
+        processes.append({
+            "id": row[0],
+            "name": row[1],
+            "code": row[2],
+            "current_cost": float(row[3]) if row[3] is not None else None,
+            "cost_date": str(row[4]) if row[4] is not None else None,
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "processes.html",
+        {
+            "processes": processes
+        }
+    )
