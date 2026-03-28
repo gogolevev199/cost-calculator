@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Транспортные ставки{% endblock %}
+
+{% block content %}
+<h1>Транспортные ставки</h1>
+<p class="muted">История стоимости транспортировки до конкретных потребителей.</p>
+
+<div style="margin: 16px 0 20px 0;">
+    <a class="btn" href="/transport-rates/new">Добавить ставку</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Потребитель</th>
+            <th>Схема</th>
+            <th>Цена</th>
+            <th>Валюта</th>
+            <th>За что</th>
+            <th>Начало</th>
+            <th>Окончание</th>
+            <th>Включено</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rates %}
+        <tr>
+            <td>{{ r.customer_name }}</td>
+            <td>{{ r.scheme_name }}</td>
+            <td>{{ r.price }}</td>
+            <td>{{ r.currency }}</td>
+            <td>{{ r.price_per }}</td>
+            <td>{{ r.valid_from }}</td>
+            <td>{{ r.valid_to or "Активна" }}</td>
+            <td>
+                {% set parts = [] %}
+                {% if r.includes_loading %}{% set _ = parts.append("погрузка") %}{% endif %}
+                {% if r.includes_unloading %}{% set _ = parts.append("разгрузка") %}{% endif %}
+                {% if r.includes_packaging %}{% set _ = parts.append("упаковка") %}{% endif %}
+                {{ parts|join(", ") if parts else "—" }}
+            </td>
+            <td>
+                <a href="/transport-rates/{{ r.id }}/edit">Редактировать</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not rates %}
+<p class="muted" style="margin-top:16px;">Транспортные ставки пока не добавлены.</p>
+{% endif %}
+{% endblock %}

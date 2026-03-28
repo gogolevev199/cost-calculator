@@ -469,3 +469,49 @@ def customer_update(
         )
 
     return RedirectResponse(url="/customers-page", status_code=303)
+@app.get("/transport-page", response_class=HTMLResponse)
+def transport_page(request: Request):
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                trh.id,
+                c.name AS customer_name,
+                ts.name AS scheme_name,
+                trh.price,
+                trh.currency,
+                trh.price_per,
+                trh.valid_from,
+                trh.valid_to,
+                trh.includes_loading,
+                trh.includes_unloading,
+                trh.includes_packaging
+            FROM transport_rate_history trh
+            JOIN customers c ON c.id = trh.customer_id
+            JOIN transport_schemes ts ON ts.id = trh.transport_scheme_id
+            ORDER BY trh.valid_from DESC, c.name, ts.name
+        """)
+        rows = cursor.fetchall()
+
+    rates = []
+    for row in rows:
+        rates.append({
+            "id": row[0],
+            "customer_name": row[1],
+            "scheme_name": row[2],
+            "price": float(row[3]),
+            "currency": row[4],
+            "price_per": row[5],
+            "valid_from": str(row[6]),
+            "valid_to": str(row[7]) if row[7] else None,
+            "includes_loading": row[8],
+            "includes_unloading": row[9],
+            "includes_packaging": row[10],
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "transport_rates.html",
+        {
+            "rates": rates
+        }
+    )
