@@ -515,3 +515,75 @@ def transport_page(request: Request):
             "rates": rates
         }
     )
+@app.get("/transport-rates/new", response_class=HTMLResponse)
+def transport_rate_new_page(request: Request):
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, name FROM customers ORDER BY name")
+        customer_rows = cursor.fetchall()
+
+        cursor.execute("SELECT id, name FROM transport_schemes ORDER BY name")
+        scheme_rows = cursor.fetchall()
+
+    customers = [{"id": row[0], "name": row[1]} for row in customer_rows]
+    schemes = [{"id": row[0], "name": row[1]} for row in scheme_rows]
+
+    return templates.TemplateResponse(
+        request,
+        "transport_rate_form.html",
+        {
+            "customers": customers,
+            "schemes": schemes,
+            "rate": None
+        }
+    )
+
+
+@app.post("/transport-rates/new")
+def transport_rate_create(
+    customer_id: str = Form(...),
+    transport_scheme_id: str = Form(...),
+    price: float = Form(...),
+    currency: str = Form("RUB"),
+    price_per: str = Form("trip"),
+    valid_from: str = Form(...),
+    valid_to: str = Form(""),
+    includes_loading: str | None = Form(None),
+    includes_unloading: str | None = Form(None),
+    includes_packaging: str | None = Form(None),
+    notes: str = Form("")
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO transport_rate_history
+            (
+                customer_id,
+                transport_scheme_id,
+                price,
+                currency,
+                price_per,
+                valid_from,
+                valid_to,
+                includes_loading,
+                includes_unloading,
+                includes_packaging,
+                notes
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                customer_id,
+                transport_scheme_id,
+                price,
+                currency,
+                price_per,
+                valid_from,
+                valid_to if valid_to else None,
+                includes_loading is not None,
+                includes_unloading is not None,
+                includes_packaging is not None,
+                notes
+            )
+        )
+
+    return RedirectResponse(url="/transport-page", status_code=303)

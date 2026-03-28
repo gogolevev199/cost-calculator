@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить транспортную ставку{% endblock %}
+
+{% block content %}
+<h1>{% if rate %}Редактировать транспортную ставку{% else %}Добавить транспортную ставку{% endif %}</h1>
+<p class="muted">Ставка доставки до конкретного потребителя.</p>
+
+<form method="post" action="{% if rate %}/transport-rates/{{ rate.id }}/edit{% else %}/transport-rates/new{% endif %}" style="margin-top: 20px;">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Потребитель</label>
+            <select name="customer_id" required>
+                <option value="">Выберите потребителя</option>
+                {% for c in customers %}
+                <option value="{{ c.id }}" {% if rate and rate.customer_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Схема транспорта</label>
+            <select name="transport_scheme_id" required>
+                <option value="">Выберите схему</option>
+                {% for s in schemes %}
+                <option value="{{ s.id }}" {% if rate and rate.transport_scheme_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Цена</label>
+            <input type="number" step="0.01" name="price" required value="{{ rate.price if rate else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Валюта</label>
+            <input type="text" name="currency" value="{{ rate.currency if rate else 'RUB' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Цена за</label>
+            <select name="price_per" required>
+                {% set current_price_per = rate.price_per if rate else 'trip' %}
+                <option value="trip" {% if current_price_per == 'trip' %}selected{% endif %}>Рейс</option>
+                <option value="ton" {% if current_price_per == 'ton' %}selected{% endif %}>Тонну</option>
+                <option value="wagon" {% if current_price_per == 'wagon' %}selected{% endif %}>Вагон</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Дата начала действия</label>
+            <input type="date" name="valid_from" required value="{{ rate.valid_from if rate else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Дата окончания</label>
+            <input type="date" name="valid_to" value="{{ rate.valid_to if rate and rate.valid_to else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="includes_loading" value="1" {% if rate and rate.includes_loading %}checked{% endif %}>
+                Включает погрузку
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="includes_unloading" value="1" {% if rate and rate.includes_unloading %}checked{% endif %}>
+                Включает разгрузку
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="includes_packaging" value="1" {% if rate and rate.includes_packaging %}checked{% endif %}>
+                Включает упаковку
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label>Комментарий</label>
+            <textarea name="notes" rows="3">{{ rate.notes if rate else '' }}</textarea>
+        </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <button class="btn" type="submit">Сохранить</button>
+        <a href="/transport-page" style="margin-left: 12px;">Отмена</a>
+    </div>
+</form>
+{% endblock %}
