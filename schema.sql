@@ -382,3 +382,23 @@ CREATE TRIGGER trg_calculations_updated_at
 BEFORE UPDATE ON calculations
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
+CREATE TABLE IF NOT EXISTS packaging_types (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(100),
+    capacity_value NUMERIC(18,3),
+    capacity_unit VARCHAR(50),
+    cost_per_ton NUMERIC(18,2) NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_packaging_types_name
+    ON packaging_types(name);
+
+DROP TRIGGER IF EXISTS trg_packaging_types_updated_at ON packaging_types;
+CREATE TRIGGER trg_packaging_types_updated_at
+BEFORE UPDATE ON packaging_types
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();

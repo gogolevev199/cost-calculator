@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Типы фасовки{% endblock %}
+
+{% block content %}
+<h1>Типы фасовки</h1>
+<p class="muted">Справочник вариантов фасовки с фиксированной стоимостью за тонну.</p>
+
+<div style="margin: 16px 0 20px 0;">
+    <a class="btn" href="/packaging-types/new">Добавить тип фасовки</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Название</th>
+            <th>Код</th>
+            <th>Вместимость</th>
+            <th>Стоимость, руб/т</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in packaging_types %}
+        <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.code or "—" }}</td>
+            <td>
+                {% if p.capacity_value %}
+                    {{ p.capacity_value }} {{ p.capacity_unit }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td>{{ p.cost_per_ton }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not packaging_types %}
+<p class="muted" style="margin-top:16px;">Типы фасовки пока не добавлены.</p>
+{% endif %}
+{% endblock %}
