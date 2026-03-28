@@ -898,3 +898,73 @@ def recipe_version_create(
         url=f"/recipes/{recipe_id}/versions",
         status_code=303
     )
+@app.get("/recipe-versions/{version_id}/items", response_class=HTMLResponse)
+def recipe_version_items_page(request: Request, version_id: str):
+
+    with conn.cursor() as cursor:
+
+        cursor.execute("""
+            SELECT
+                rv.id,
+                rv.version_number,
+                rv.version_name,
+                r.id,
+                r.name
+            FROM recipe_versions rv
+            JOIN recipes r ON r.id = rv.recipe_id
+            WHERE rv.id = %s
+        """, (version_id,))
+
+        row = cursor.fetchone()
+
+        if not row:
+            return RedirectResponse("/recipes-page", status_code=303)
+
+        version = {
+            "id": row[0],
+            "version_number": row[1],
+            "version_name": row[2]
+        }
+
+        recipe = {
+            "id": row[3],
+            "name": row[4]
+        }
+
+        cursor.execute("""
+            SELECT
+                ri.id,
+                m.name,
+                ri.quantity,
+                (
+                    SELECT COUNT(*)
+                    FROM recipe_item_processes rip
+                    WHERE rip.recipe_item_id = ri.id
+                ) as process_count
+            FROM recipe_items ri
+            JOIN materials m ON m.id = ri.material_id
+            WHERE ri.recipe_version_id = %s
+            ORDER BY m.name
+        """, (version_id,))
+
+        rows = cursor.fetchall()
+
+    items = []
+
+    for row in rows:
+        items.append({
+            "id": row[0],
+            "material_name": row[1],
+            "quantity": float(row[2]),
+            "process_count": row[3]
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "recipe_version_items.html",
+        {
+            "recipe": recipe,
+            "version": version,
+            "items": items
+        }
+    )
