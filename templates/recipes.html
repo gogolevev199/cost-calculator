@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Рецептуры{% endblock %}
+
+{% block content %}
+<h1>Рецептуры</h1>
+<p class="muted">Справочник материалов и их версий.</p>
+
+<div style="margin: 16px 0 20px 0;">
+    <a class="btn" href="/recipes/new">Добавить рецептуру</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Название</th>
+            <th>Код</th>
+            <th>Описание</th>
+            <th>Версий</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in recipes %}
+        <tr>
+            <td>{{ r.name }}</td>
+            <td>{{ r.code or "—" }}</td>
+            <td>{{ r.description or "—" }}</td>
+            <td>{{ r.versions_count }}</td>
+            <td>
+                <a href="/recipes/{{ r.id }}/versions">Версии</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not recipes %}
+<p class="muted" style="margin-top:16px;">Рецептуры пока не добавлены.</p>
+{% endif %}
+{% endblock %}

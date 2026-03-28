@@ -714,3 +714,41 @@ def transport_rate_update(
         )
 
     return RedirectResponse(url="/transport-page", status_code=303)
+@app.get("/recipes-page", response_class=HTMLResponse)
+def recipes_page(request: Request):
+
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                r.id,
+                r.name,
+                r.code,
+                r.description,
+                COUNT(rv.id) as versions_count
+            FROM recipes r
+            LEFT JOIN recipe_versions rv
+                ON rv.recipe_id = r.id
+            GROUP BY r.id
+            ORDER BY r.name
+        """)
+
+        rows = cursor.fetchall()
+
+    recipes = []
+
+    for row in rows:
+        recipes.append({
+            "id": row[0],
+            "name": row[1],
+            "code": row[2],
+            "description": row[3],
+            "versions_count": row[4]
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "recipes.html",
+        {
+            "recipes": recipes
+        }
+    )
