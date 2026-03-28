@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Новая стоимость передела{% endblock %}
+
+{% block content %}
+<h1>Новая стоимость передела</h1>
+<p class="muted">Передел: <strong>{{ process.name }}</strong></p>
+
+<form method="post" action="/processes/{{ process.id }}/costs/new" style="margin-top: 20px;">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Стоимость</label>
+            <input type="number" step="0.01" name="cost" required>
+        </div>
+
+        <div class="form-group">
+            <label>Валюта</label>
+            <input type="text" name="currency" value="RUB" required>
+        </div>
+
+        <div class="form-group">
+            <label>Дата начала действия</label>
+            <input type="date" name="valid_from" required>
+        </div>
+
+        <div class="form-group">
+            <label>Комментарий</label>
+            <textarea name="comment" rows="3"></textarea>
+        </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <button class="btn" type="submit">Сохранить стоимость</button>
+        <a href="/processes/{{ process.id }}/costs" style="margin-left: 12px;">Назад к истории</a>
+    </div>
+</form>
+{% endblock %}

@@ -1319,3 +1319,79 @@ def process_costs_page(request: Request, process_id: str):
             "costs": costs
         }
     )
+@app.get("/processes/{process_id}/costs/new", response_class=HTMLResponse)
+def process_cost_new_page(request: Request, process_id: str):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id, name FROM processes WHERE id = %s",
+            (process_id,)
+        )
+        process_row = cursor.fetchone()
+
+    if not process_row:
+        return RedirectResponse("/processes-page", status_code=303)
+
+    process = {
+        "id": process_row[0],
+        "name": process_row[1]
+    }
+
+    return templates.TemplateResponse(
+        request,
+        "process_cost_form.html",
+        {
+            "process": process
+        }
+    )
+
+
+@app.post("/processes/{process_id}/costs/new")
+def process_cost_create(
+    process_id: str,
+    cost: float = Form(...),
+    currency: str = Form("RUB"),
+    valid_from: str = Form(...),
+    comment: str = Form("")
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id FROM processes WHERE id = %s",
+            (process_id,)
+        )
+        process_row = cursor.fetchone()
+
+        if not process_row:
+            return RedirectResponse("/processes-page", status_code=303)
+
+        cursor.execute(
+            """
+            UPDATE process_cost_history
+            SET valid_to = %s::date - INTERVAL '1 day'
+            WHERE process_id = %s
+              AND valid_to IS NULL
+            """,
+            (valid_from, process_id)
+        )
+
+        cursor.execute(
+            """
+            INSERT INTO process_cost_history
+            (process_id, cost, currency, valid_from, valid_to, comment)
+            VALUES (%s, %s, %s, %s, NULL, %s)
+            """,
+            (process_id, cost, currency, valid_from, comment)
+        )
+
+        cursor.execute(
+            """
+            UPDATE processes
+            SET default_cost = %s
+            WHERE id = %s
+            """,
+            (cost, process_id)
+        )
+
+    return RedirectResponse(
+        url=f"/processes/{process_id}/costs",
+        status_code=303
+    )
