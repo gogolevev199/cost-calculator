@@ -1522,3 +1522,32 @@ def recipe_version_calculate_page(
             "total_cost": round(total_cost, 2),
         }
     )
+@app.get("/packaging-page", response_class=HTMLResponse)
+def packaging_page(request: Request):
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT id, name, code, capacity_value, capacity_unit, cost_per_ton
+            FROM packaging_types
+            WHERE is_active = TRUE
+            ORDER BY name
+        """)
+        rows = cursor.fetchall()
+
+    packaging_types = []
+    for row in rows:
+        packaging_types.append({
+            "id": row[0],
+            "name": row[1],
+            "code": row[2],
+            "capacity_value": float(row[3]) if row[3] is not None else None,
+            "capacity_unit": row[4],
+            "cost_per_ton": float(row[5]),
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "packaging_types.html",
+        {
+            "packaging_types": packaging_types
+        }
+    )
