@@ -777,3 +777,58 @@ def recipe_create(
         )
 
     return RedirectResponse(url="/recipes-page", status_code=303)
+@app.get("/recipes/{recipe_id}/versions", response_class=HTMLResponse)
+def recipe_versions_page(request: Request, recipe_id: str):
+
+    with conn.cursor() as cursor:
+
+        cursor.execute(
+            "SELECT id, name FROM recipes WHERE id = %s",
+            (recipe_id,)
+        )
+
+        recipe_row = cursor.fetchone()
+
+        if not recipe_row:
+            return RedirectResponse("/recipes-page", status_code=303)
+
+        recipe = {
+            "id": recipe_row[0],
+            "name": recipe_row[1]
+        }
+
+        cursor.execute("""
+            SELECT
+                id,
+                version_number,
+                version_name,
+                status,
+                comment,
+                created_at
+            FROM recipe_versions
+            WHERE recipe_id = %s
+            ORDER BY created_at DESC
+        """, (recipe_id,))
+
+        rows = cursor.fetchall()
+
+    versions = []
+
+    for row in rows:
+        versions.append({
+            "id": row[0],
+            "version_number": row[1],
+            "version_name": row[2],
+            "status": row[3],
+            "comment": row[4],
+            "created_at": str(row[5])
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "recipe_versions.html",
+        {
+            "recipe": recipe,
+            "versions": versions
+        }
+    )
