@@ -15,7 +15,25 @@
             <label>Постоянные затраты, %</label>
             <input type="number" step="0.01" name="overhead_percent" value="{{ overhead_percent }}" required>
         </div>
+
+        <div class="form-group">
+            <label>Смешивание, руб/т</label>
+            <input type="number" step="0.01" name="mixing_cost_per_ton" value="{{ mixing_cost_per_ton }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Тип фасовки</label>
+            <select name="packaging_type_id">
+                <option value="">Без фасовки</option>
+                {% for p in packaging_types %}
+                <option value="{{ p.id }}" {% if selected_packaging_type_id == p.id %}selected{% endif %}>
+                    {{ p.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
     </div>
+
     <button class="btn" type="submit">Пересчитать</button>
 </form>
 
@@ -54,12 +72,59 @@
 <p class="muted" style="margin-top:16px;">В этой версии пока нет компонентов.</p>
 {% endif %}
 
+{% if selected_packaging %}
+<div style="margin-top: 24px;">
+    <table>
+        <tbody>
+            <tr>
+                <th>Выбранная фасовка</th>
+                <td>{{ selected_packaging.name }}</td>
+            </tr>
+            <tr>
+                <th>Вместимость упаковки</th>
+                <td>
+                    {% if selected_packaging.capacity_value %}
+                        {{ selected_packaging.capacity_value }} {{ selected_packaging.capacity_unit }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Стоимость фасовки, руб/т</th>
+                <td>{{ selected_packaging.cost_per_ton }}</td>
+            </tr>
+            <tr>
+                <th>Стоимость упаковки, руб/ед.</th>
+                <td>{{ selected_packaging.package_price }}</td>
+            </tr>
+            <tr>
+                <th>Количество упаковок</th>
+                <td>{{ package_count }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
 <div style="margin-top: 24px;">
     <table>
         <tbody>
             <tr>
                 <th>Прямая производственная себестоимость</th>
                 <td>{{ direct_cost }}</td>
+            </tr>
+            <tr>
+                <th>Смешивание</th>
+                <td>{{ mixing_cost_total }}</td>
+            </tr>
+            <tr>
+                <th>Фасовка (работа)</th>
+                <td>{{ packaging_work_cost_total }}</td>
+            </tr>
+            <tr>
+                <th>Упаковка (материалы)</th>
+                <td>{{ packaging_material_cost_total }}</td>
             </tr>
             <tr>
                 <th>Постоянные затраты ({{ overhead_percent }}%)</th>
