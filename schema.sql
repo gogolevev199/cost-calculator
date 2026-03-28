@@ -128,6 +128,21 @@ CREATE TABLE IF NOT EXISTS recipe_items (
     comment TEXT
 );
 
+CREATE TABLE IF NOT EXISTS recipe_item_processes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    recipe_item_id UUID NOT NULL REFERENCES recipe_items(id) ON DELETE CASCADE,
+    process_id UUID NOT NULL REFERENCES processes(id) ON DELETE RESTRICT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    loss_coefficient NUMERIC(18,6) NOT NULL DEFAULT 1,
+    comment TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_recipe_item_processes_recipe_item_id
+    ON recipe_item_processes(recipe_item_id);
+
+CREATE INDEX IF NOT EXISTS idx_recipe_item_processes_process_id
+    ON recipe_item_processes(process_id);
+
 CREATE INDEX IF NOT EXISTS idx_recipe_items_recipe_version_id
     ON recipe_items(recipe_version_id);
 
