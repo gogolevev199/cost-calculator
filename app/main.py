@@ -53,16 +53,16 @@ def home(request: Request):
         cursor.execute("SELECT COUNT(*) FROM recipes")
         recipes_count = cursor.fetchone()[0]
 
-    return templates.TemplateResponse(
-        "dashboard.html",
-        {
-            "request": request,
-            "materials_count": materials_count,
-            "customers_count": customers_count,
-            "transport_schemes_count": transport_schemes_count,
-            "recipes_count": recipes_count
-        }
-    )
+        return templates.TemplateResponse(
+            request,
+            "dashboard.html",
+            {
+                "materials_count": materials_count,
+                "customers_count": customers_count,
+                "transport_schemes_count": transport_schemes_count,
+                "recipes_count": recipes_count
+            }
+        )
 
 @app.get("/health")
 def health():
