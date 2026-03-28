@@ -4,8 +4,8 @@ from pathlib import Path
 import psycopg2
 from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
-from fastapi import Request
-from fastapi.responses import HTMLResponse
+from fastapi import Request, Form
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -162,3 +162,31 @@ def materials_page(request: Request):
             "materials": materials
         }
     )
+@app.get("/materials/new", response_class=HTMLResponse)
+def material_new_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "material_form.html",
+        {}
+    )
+
+
+@app.post("/materials/new")
+def material_create(
+    name: str = Form(...),
+    code: str = Form(""),
+    unit: str = Form("t"),
+    supplier: str = Form(""),
+    fraction: str = Form(""),
+    notes: str = Form("")
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO materials (name, code, unit, supplier, fraction, notes)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (name, code, unit, supplier, fraction, notes)
+        )
+
+    return RedirectResponse(url="/materials-page", status_code=303)
