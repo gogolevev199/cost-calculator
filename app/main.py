@@ -554,7 +554,22 @@ def transport_rate_create(
 ):
     with conn.cursor() as cursor:
         cursor.execute(
-            """
+        """
+        UPDATE transport_rate_history
+        SET valid_to = %s::date - INTERVAL '1 day'
+        WHERE customer_id = %s
+          AND transport_scheme_id = %s
+          AND valid_to IS NULL
+        """,
+        (
+            valid_from,
+            customer_id,
+            transport_scheme_id
+        )
+        )
+
+        cursor.execute(
+        """
             INSERT INTO transport_rate_history
             (
                 customer_id,
