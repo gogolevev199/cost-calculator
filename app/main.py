@@ -752,3 +752,28 @@ def recipes_page(request: Request):
             "recipes": recipes
         }
     )
+@app.get("/recipes/new", response_class=HTMLResponse)
+def recipe_new_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "recipe_form.html",
+        {}
+    )
+
+
+@app.post("/recipes/new")
+def recipe_create(
+    name: str = Form(...),
+    code: str = Form(""),
+    description: str = Form("")
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO recipes (name, code, description)
+            VALUES (%s, %s, %s)
+            """,
+            (name, code, description)
+        )
+
+    return RedirectResponse(url="/recipes-page", status_code=303)

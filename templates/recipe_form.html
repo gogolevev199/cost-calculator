@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить рецептуру{% endblock %}
+
+{% block content %}
+<h1>Добавить рецептуру</h1>
+<p class="muted">Создание карточки материала. Состав и версии добавим следующим шагом.</p>
+
+<form method="post" action="/recipes/new" style="margin-top: 20px;">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Название</label>
+            <input type="text" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <label>Код</label>
+            <input type="text" name="code">
+        </div>
+
+        <div class="form-group" style="grid-column: 1 / -1;">
+            <label>Описание</label>
+            <textarea name="description" rows="4"></textarea>
+        </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <button class="btn" type="submit">Сохранить</button>
+        <a href="/recipes-page" style="margin-left: 12px;">Отмена</a>
+    </div>
+</form>
+{% endblock %}
