@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Сырье{% endblock %}
+
+{% block content %}
+<h1>Сырье</h1>
+<p class="muted">Справочник материалов с текущей ценой и историей цен.</p>
+
+<div style="margin: 16px 0 20px 0;">
+    <a class="btn" href="/materials/new">Добавить материал</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Название</th>
+            <th>Текущая цена</th>
+            <th>Дата цены</th>
+            <th>Поставщик</th>
+            <th>Фракция</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in materials %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td>
+                {% if item.current_price is not none %}
+                    {{ item.current_price }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td>
+                {% if item.price_date %}
+                    {{ item.price_date }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td>{{ item.supplier or "—" }}</td>
+            <td>{{ item.fraction or "—" }}</td>
+            <td>
+                <a href="/materials/{{ item.id }}/prices">История цен</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not materials %}
+<p class="muted" style="margin-top:16px;">Материалы пока не добавлены.</p>
+{% endif %}
+{% endblock %}

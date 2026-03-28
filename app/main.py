@@ -120,3 +120,45 @@ def users():
         cursor.execute("SELECT id, login, full_name, role, is_active FROM users ORDER BY login")
         rows = cursor.fetchall()
     return rows
+@app.get("/materials-page", response_class=HTMLResponse)
+def materials_page(request: Request):
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                m.id,
+                m.name,
+                m.supplier,
+                m.fraction,
+                mph.price AS current_price,
+                mph.valid_from AS price_date
+            FROM materials m
+            LEFT JOIN LATERAL (
+                SELECT price, valid_from
+                FROM material_price_history
+                WHERE material_id = m.id
+                  AND valid_to IS NULL
+                ORDER BY valid_from DESC
+                LIMIT 1
+            ) mph ON TRUE
+            ORDER BY m.name
+        """)
+        rows = cursor.fetchall()
+
+    materials = []
+    for row in rows:
+        materials.append({
+            "id": row[0],
+            "name": row[1],
+            "supplier": row[2],
+            "fraction": row[3],
+            "current_price": float(row[4]) if row[4] is not None else None,
+            "price_date": str(row[5]) if row[5] is not None else None,
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "materials.html",
+        {
+            "materials": materials
+        }
+    )
