@@ -1257,8 +1257,8 @@ def process_create(
     with conn.cursor() as cursor:
         cursor.execute(
             """
-            INSERT INTO processes (name, code, description)
-            VALUES (%s,%s,%s)
+            INSERT INTO processes (name, code, notes)
+            VALUES (%s, %s, %s)
             """,
             (
                 name,
