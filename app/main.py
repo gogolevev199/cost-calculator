@@ -1043,7 +1043,6 @@ def recipe_item_create(
 
 @app.get("/recipe-items/{item_id}/processes", response_class=HTMLResponse)
 def recipe_item_processes_page(request: Request, item_id: str):
-
     with conn.cursor() as cursor:
         cursor.execute("""
             SELECT
@@ -1088,12 +1087,12 @@ def recipe_item_processes_page(request: Request, item_id: str):
             SELECT
                 rip.id,
                 rip.sort_order,
-                p.name,
+                o.name,
                 rip.loss_coefficient
             FROM recipe_item_processes rip
-            JOIN processes p ON p.id = rip.process_id
+            JOIN operations o ON o.id = rip.operation_id
             WHERE rip.recipe_item_id = %s
-            ORDER BY rip.sort_order, p.name
+            ORDER BY rip.sort_order, o.name
         """, (item_id,))
 
         process_rows = cursor.fetchall()
@@ -1149,9 +1148,10 @@ def recipe_item_process_new_page(request: Request, item_id: str):
         }
 
         cursor.execute("""
-            SELECT id, name
-            FROM processes
+            SELECT id, name, default_loss_coefficient
+            FROM operations
             WHERE is_active = TRUE
+              AND operation_group = 'process'
             ORDER BY name
         """)
         process_rows = cursor.fetchall()
@@ -1163,7 +1163,18 @@ def recipe_item_process_new_page(request: Request, item_id: str):
         """, (item_id,))
         next_sort_order = cursor.fetchone()[0]
 
-    processes = [{"id": r[0], "name": r[1]} for r in process_rows]
+    processes = [
+        {
+            "id": r[0],
+            "name": r[1],
+            "default_loss_coefficient": float(r[2])
+        }
+        for r in process_rows
+    ]
+
+    default_loss_coefficient = 1.0
+    if processes:
+        default_loss_coefficient = processes[0]["default_loss_coefficient"]
 
     return templates.TemplateResponse(
         request,
@@ -1172,7 +1183,8 @@ def recipe_item_process_new_page(request: Request, item_id: str):
             "item": item,
             "version": version,
             "processes": processes,
-            "next_sort_order": next_sort_order
+            "next_sort_order": next_sort_order,
+            "default_loss_coefficient": default_loss_coefficient
         }
     )
 
@@ -1189,7 +1201,7 @@ def recipe_item_process_create(
         cursor.execute(
             """
             INSERT INTO recipe_item_processes
-            (recipe_item_id, process_id, sort_order, loss_coefficient, comment)
+            (recipe_item_id, operation_id, sort_order, loss_coefficient, comment)
             VALUES (%s, %s, %s, %s, %s)
             """,
             (item_id, process_id, sort_order, loss_coefficient, comment)
@@ -1600,19 +1612,19 @@ def recipe_version_calculate_page(
             cursor.execute("""
                 SELECT
                     rip.loss_coefficient,
-                    COALESCE(pch.cost, p.default_cost, 0) AS process_cost
+                    COALESCE(och.cost, 0) AS process_cost
                 FROM recipe_item_processes rip
-                JOIN processes p ON p.id = rip.process_id
+                JOIN operations o ON o.id = rip.operation_id
                 LEFT JOIN LATERAL (
                     SELECT cost
-                    FROM process_cost_history
-                    WHERE process_id = p.id
+                    FROM operation_cost_history
+                    WHERE operation_id = o.id
                       AND valid_to IS NULL
                     ORDER BY valid_from DESC
                     LIMIT 1
-                ) pch ON TRUE
+                ) och ON TRUE
                 WHERE rip.recipe_item_id = %s
-                ORDER BY rip.sort_order, p.name
+                ORDER BY rip.sort_order, o.name
             """, (item_id,))
             process_rows = cursor.fetchall()
 
@@ -2016,19 +2028,19 @@ def save_recipe_version_calculation(
             cursor.execute("""
                 SELECT
                     rip.loss_coefficient,
-                    COALESCE(pch.cost, p.default_cost, 0) AS process_cost
+                    COALESCE(och.cost, 0) AS process_cost
                 FROM recipe_item_processes rip
-                JOIN processes p ON p.id = rip.process_id
+                JOIN operations o ON o.id = rip.operation_id
                 LEFT JOIN LATERAL (
                     SELECT cost
-                    FROM process_cost_history
-                    WHERE process_id = p.id
+                    FROM operation_cost_history
+                    WHERE operation_id = o.id
                       AND valid_to IS NULL
                     ORDER BY valid_from DESC
                     LIMIT 1
-                ) pch ON TRUE
+                ) och ON TRUE
                 WHERE rip.recipe_item_id = %s
-                ORDER BY rip.sort_order, p.name
+                ORDER BY rip.sort_order, o.name
             """, (item_id,))
             process_rows = cursor.fetchall()
 
