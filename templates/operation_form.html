@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить операцию{% endblock %}
+
+{% block content %}
+<h1>Добавить операцию</h1>
+
+<form method="post" action="/operations/new" style="margin-top: 20px;">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Название</label>
+            <input type="text" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <label>Код</label>
+            <input type="text" name="code">
+        </div>
+
+        <div class="form-group">
+            <label>Группа</label>
+            <select name="operation_group" required>
+                <option value="process">process</option>
+                <option value="common">common</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Единица</label>
+            <input type="text" name="unit" value="ton" required>
+        </div>
+    </div>
+
+    <div style="margin-top:20px;">
+        <button class="btn" type="submit">Сохранить</button>
+        <a href="/operations-page" style="margin-left:12px;">Отмена</a>
+    </div>
+</form>
+{% endblock %}

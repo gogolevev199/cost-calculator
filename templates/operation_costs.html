@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}История стоимости операции{% endblock %}
+
+{% block content %}
+<h1>История стоимости операции</h1>
+<p class="muted">Операция: <strong>{{ operation.name }}</strong></p>
+
+<div style="margin: 16px 0 20px 0;">
+    <a class="btn" href="/operations/{{ operation.id }}/costs/new">Добавить новую стоимость</a>
+    <a href="/operations-page" style="margin-left: 12px;">Назад к операциям</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Стоимость</th>
+            <th>Валюта</th>
+            <th>Дата начала</th>
+            <th>Дата окончания</th>
+            <th>Комментарий</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in costs %}
+        <tr>
+            <td>{{ item.cost }}</td>
+            <td>{{ item.currency }}</td>
+            <td>{{ item.valid_from }}</td>
+            <td>{{ item.valid_to or "Активна" }}</td>
+            <td>{{ item.comment or "—" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not costs %}
+<p class="muted" style="margin-top:16px;">История стоимости пока пуста.</p>
+{% endif %}
+{% endblock %}
