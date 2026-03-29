@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Сохраненные расчеты{% endblock %}
+
+{% block content %}
+<h1>Сохраненные расчеты</h1>
+<p class="muted">Архив зафиксированных расчетов себестоимости.</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Дата</th>
+            <th>Рецептура</th>
+            <th>Версия</th>
+            <th>Фасовка</th>
+            <th>Постоянные, %</th>
+            <th>Итоговая себестоимость</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in calculations %}
+        <tr>
+            <td>{{ c.created_at }}</td>
+            <td>{{ c.recipe_name }}</td>
+            <td>
+                {{ c.version_number }}
+                {% if c.version_name %} — {{ c.version_name }}{% endif %}
+            </td>
+            <td>{{ c.packaging_name or "—" }}</td>
+            <td>{{ c.overhead_percent }}</td>
+            <td>{{ c.total_cost }}</td>
+            <td>
+                <a href="/saved-calculations/{{ c.id }}">Открыть</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not calculations %}
+<p class="muted" style="margin-top:16px;">Сохраненных расчетов пока нет.</p>
+{% endif %}
+{% endblock %}

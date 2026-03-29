@@ -1665,3 +1665,41 @@ def packaging_type_create(
         url="/packaging-page",
         status_code=303
     )
+@app.get("/saved-calculations-page", response_class=HTMLResponse)
+def saved_calculations_page(request: Request):
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                id,
+                recipe_name_snapshot,
+                version_number_snapshot,
+                version_name_snapshot,
+                packaging_name_snapshot,
+                overhead_percent,
+                total_cost,
+                created_at
+            FROM saved_calculations
+            ORDER BY created_at DESC
+        """)
+        rows = cursor.fetchall()
+
+    calculations = []
+    for row in rows:
+        calculations.append({
+            "id": row[0],
+            "recipe_name": row[1],
+            "version_number": row[2],
+            "version_name": row[3],
+            "packaging_name": row[4],
+            "overhead_percent": float(row[5]),
+            "total_cost": float(row[6]),
+            "created_at": str(row[7]),
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "saved_calculations.html",
+        {
+            "calculations": calculations
+        }
+    )
