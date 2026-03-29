@@ -1401,7 +1401,8 @@ def recipe_version_calculate_page(
     version_id: str,
     overhead_percent: float = 20.0,
     mixing_cost_per_ton: float = 0.0,
-    packaging_type_id: str | None = None
+    packaging_type_id: str | None = None,
+    customer_id: str | None = None
 ):
     with conn.cursor() as cursor:
         cursor.execute("""
@@ -1448,6 +1449,20 @@ def recipe_version_calculate_page(
                 "capacity_unit": p[3],
                 "cost_per_ton": float(p[4]),
                 "package_price": float(p[5]),
+            })
+
+        cursor.execute("""
+            SELECT id, name
+            FROM customers
+            ORDER BY name
+        """)
+        customer_rows = cursor.fetchall()
+
+        customers = []
+        for c in customer_rows:
+            customers.append({
+                "id": c[0],
+                "name": c[1]
             })
 
         selected_packaging = None
@@ -1584,6 +1599,8 @@ def recipe_version_calculate_page(
             "items": items,
             "packaging_types": packaging_types,
             "selected_packaging_type_id": packaging_type_id,
+            "customers": customers,
+            "selected_customer_id": customer_id,
             "selected_packaging": selected_packaging,
             "overhead_percent": overhead_percent,
             "mixing_cost_per_ton": mixing_cost_per_ton,
@@ -1708,7 +1725,8 @@ def save_recipe_version_calculation(
     version_id: str,
     overhead_percent: float = Form(...),
     mixing_cost_per_ton: float = Form(...),
-    packaging_type_id: str = Form("")
+    packaging_type_id: str = Form(""),
+    customer_id: str = Form("")
 ):
     with conn.cursor() as cursor:
         cursor.execute("""
@@ -1732,6 +1750,19 @@ def save_recipe_version_calculation(
         version_name = row[2]
         recipe_id = row[3]
         recipe_name = row[4]
+
+        customer_name = None
+
+        if customer_id:
+            cursor.execute("""
+                SELECT name
+                FROM customers
+                WHERE id = %s
+            """, (customer_id,))
+            c = cursor.fetchone()
+
+            if c:
+                customer_name = c[0]
 
         selected_packaging = None
         if packaging_type_id:
@@ -1862,6 +1893,8 @@ def save_recipe_version_calculation(
             INSERT INTO saved_calculations (
                 recipe_id,
                 recipe_version_id,
+                customer_id,
+                customer_name_snapshot,
                 recipe_name_snapshot,
                 version_number_snapshot,
                 version_name_snapshot,
@@ -1891,6 +1924,8 @@ def save_recipe_version_calculation(
         """, (
             recipe_id,
             recipe_version_id,
+            customer_id if customer_id else None,
+            customer_name,       
             recipe_name,
             version_number,
             version_name,

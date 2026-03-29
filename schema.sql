@@ -409,6 +409,8 @@ EXECUTE FUNCTION set_updated_at();
 CREATE TABLE IF NOT EXISTS saved_calculations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     recipe_id UUID REFERENCES recipes(id) ON DELETE SET NULL,
+    customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+    customer_name_snapshot VARCHAR(255),
     recipe_version_id UUID REFERENCES recipe_versions(id) ON DELETE SET NULL,
     recipe_name_snapshot VARCHAR(255) NOT NULL,
     version_number_snapshot INTEGER,
@@ -431,6 +433,12 @@ CREATE TABLE IF NOT EXISTS saved_calculations (
     package_count NUMERIC(18,6) NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE saved_calculations
+ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id) ON DELETE SET NULL;
+
+ALTER TABLE saved_calculations
+ADD COLUMN IF NOT EXISTS customer_name_snapshot VARCHAR(255);
 
 CREATE TABLE IF NOT EXISTS saved_calculation_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
