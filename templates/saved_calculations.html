@@ -11,6 +11,7 @@
         <tr>
             <th>Дата</th>
             <th>Рецептура</th>
+            <th>Потребитель</th>
             <th>Версия</th>
             <th>Фасовка</th>
             <th>Постоянные, %</th>
@@ -23,6 +24,7 @@
         <tr>
             <td>{{ c.created_at }}</td>
             <td>{{ c.recipe_name }}</td>
+            <td>{{ c.customer_name or "—" }}</td>
             <td>
                 {{ c.version_number }}
                 {% if c.version_name %} — {{ c.version_name }}{% endif %}

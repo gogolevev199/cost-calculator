@@ -1689,6 +1689,7 @@ def saved_calculations_page(request: Request):
             SELECT
                 id,
                 recipe_name_snapshot,
+                customer_name_snapshot,
                 version_number_snapshot,
                 version_name_snapshot,
                 packaging_name_snapshot,
@@ -1705,12 +1706,13 @@ def saved_calculations_page(request: Request):
         calculations.append({
             "id": row[0],
             "recipe_name": row[1],
-            "version_number": row[2],
-            "version_name": row[3],
-            "packaging_name": row[4],
-            "overhead_percent": float(row[5]),
-            "total_cost": float(row[6]),
-            "created_at": str(row[7]),
+            "customer_name": row[2],
+            "version_number": row[3],
+            "version_name": row[4],
+            "packaging_name": row[5],
+            "overhead_percent": float(row[6]),
+            "total_cost": float(row[7]),
+            "created_at": str(row[8]),
         })
 
     return templates.TemplateResponse(
