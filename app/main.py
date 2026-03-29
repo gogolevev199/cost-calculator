@@ -1405,7 +1405,10 @@ def recipe_version_calculate_page(
     customer_id: str | None = None,
     transport_scheme_id: str | None = None,
     finance_days: int = 0,
-    finance_rate: float = 0.0
+    finance_rate: float = 0.0,
+    delivery_total_tons: float = 0.0,
+    delivery_batch_tons: float = 0.0,
+    delivery_period_days: int = 0
 ):
     with conn.cursor() as cursor:
         cursor.execute("""
@@ -1691,12 +1694,36 @@ def recipe_version_calculate_page(
         + transport_cost_total
     )
     overhead_cost = overhead_base * overhead_percent / 100.0
-
     production_total = overhead_base + overhead_cost
 
+    delivery_batches = []
     finance_cost = 0.0
+
     if finance_days > 0 and finance_rate > 0:
-        finance_cost = production_total * (finance_rate / 100.0) * (finance_days / 365.0)
+        if delivery_total_tons > 0 and delivery_batch_tons > 0 and delivery_period_days > 0:
+            remaining = delivery_total_tons
+            batch_no = 1
+
+            while remaining > 0:
+                batch_tons = delivery_batch_tons if remaining >= delivery_batch_tons else remaining
+                batch_share = batch_tons / delivery_total_tons if delivery_total_tons > 0 else 0
+                batch_cost = production_total * batch_share
+                days_to_payment = finance_days + ((batch_no - 1) * delivery_period_days)
+                batch_finance_cost = batch_cost * (finance_rate / 100.0) * (days_to_payment / 365.0)
+
+                delivery_batches.append({
+                    "batch_no": batch_no,
+                    "batch_tons": round(batch_tons, 3),
+                    "days_to_payment": days_to_payment,
+                    "batch_cost": round(batch_cost, 2),
+                    "batch_finance_cost": round(batch_finance_cost, 2),
+                })
+
+                finance_cost += batch_finance_cost
+                remaining -= batch_tons
+                batch_no += 1
+        else:
+            finance_cost = production_total * (finance_rate / 100.0) * (finance_days / 365.0)
 
     total_cost = production_total + finance_cost
 
@@ -1720,6 +1747,10 @@ def recipe_version_calculate_page(
             "mixing_cost_per_ton": mixing_cost_per_ton,
             "finance_days": finance_days,
             "finance_rate": finance_rate,
+            "delivery_total_tons": delivery_total_tons,
+            "delivery_batch_tons": delivery_batch_tons,
+            "delivery_period_days": delivery_period_days,
+            "delivery_batches": delivery_batches,
             "direct_cost": round(direct_cost, 2),
             "mixing_cost_total": round(mixing_cost_total, 2),
             "packaging_work_cost_total": round(packaging_work_cost_total, 2),

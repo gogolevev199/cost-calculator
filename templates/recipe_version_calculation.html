@@ -66,6 +66,21 @@
             <label>Стоимость денег (% годовых)</label>
             <input type="number" step="0.01" name="finance_rate" value="{{ finance_rate }}">
         </div>
+
+        <div class="form-group">
+            <label>Общий объем поставки, т</label>
+            <input type="number" step="0.001" name="delivery_total_tons" value="{{ delivery_total_tons }}">
+        </div>
+
+        <div class="form-group">
+            <label>Размер партии, т</label>
+            <input type="number" step="0.001" name="delivery_batch_tons" value="{{ delivery_batch_tons }}">
+        </div>
+
+        <div class="form-group">
+            <label>Период между партиями, дней</label>
+            <input type="number" name="delivery_period_days" value="{{ delivery_period_days }}">
+        </div>
     </div>
 
     <button class="btn" type="submit">Пересчитать</button>
@@ -191,6 +206,34 @@
                 <td>Не найдена активная ставка для выбранного клиента и схемы</td>
             </tr>
             {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if delivery_batches %}
+<div style="margin-top: 24px;">
+    <h3>Автоматический график поставок</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>№ партии</th>
+                <th>Объем, т</th>
+                <th>Дни до оплаты</th>
+                <th>Стоимость партии</th>
+                <th>Стоимость денег</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in delivery_batches %}
+            <tr>
+                <td>{{ b.batch_no }}</td>
+                <td>{{ b.batch_tons }}</td>
+                <td>{{ b.days_to_payment }}</td>
+                <td>{{ b.batch_cost }}</td>
+                <td>{{ b.batch_finance_cost }}</td>
+            </tr>
+            {% endfor %}
         </tbody>
     </table>
 </div>
