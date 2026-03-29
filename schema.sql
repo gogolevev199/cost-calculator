@@ -423,6 +423,16 @@ CREATE TABLE IF NOT EXISTS saved_calculations (
     packaging_capacity_unit_snapshot VARCHAR(50),
     packaging_cost_per_ton_snapshot NUMERIC(18,2) NOT NULL DEFAULT 0,
     package_price_snapshot NUMERIC(18,2) NOT NULL DEFAULT 0,
+    
+    transport_scheme_id UUID REFERENCES transport_schemes(id) ON DELETE SET NULL,
+    transport_scheme_name_snapshot VARCHAR(255),
+    transport_rate_snapshot NUMERIC(18,2) NOT NULL DEFAULT 0,
+    transport_rate_price_per_snapshot VARCHAR(50),
+    transport_capacity_tons_snapshot NUMERIC(18,3),
+    transport_units_count NUMERIC(18,6) NOT NULL DEFAULT 0,
+    transport_cost_per_ton NUMERIC(18,2) NOT NULL DEFAULT 0,
+    transport_cost_total NUMERIC(18,2) NOT NULL DEFAULT 0,
+
     direct_cost NUMERIC(18,2) NOT NULL DEFAULT 0,
     mixing_cost_total NUMERIC(18,2) NOT NULL DEFAULT 0,
     packaging_work_cost_total NUMERIC(18,2) NOT NULL DEFAULT 0,
@@ -433,6 +443,30 @@ CREATE TABLE IF NOT EXISTS saved_calculations (
     package_count NUMERIC(18,6) NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE saved_calculations
+ADD COLUMN IF NOT EXISTS transport_scheme_id UUID REFERENCES transport_schemes(id) ON DELETE SET NULL;
+
+ALTER TABLE saved_calculations
+ADD COLUMN IF NOT EXISTS transport_scheme_name_snapshot VARCHAR(255);
+
+ALTER TABLE saved_calculations
+ADD COLUMN IF NOT EXISTS transport_rate_snapshot NUMERIC(18,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE saved_calculations
+ADD COLUMN IF NOT EXISTS transport_rate_price_per_snapshot VARCHAR(50);
+
+ALTER TABLE saved_calculations
+ADD COLUMN IF NOT EXISTS transport_capacity_tons_snapshot NUMERIC(18,3);
+
+ALTER TABLE saved_calculations
+ADD COLUMN IF NOT EXISTS transport_units_count NUMERIC(18,6) NOT NULL DEFAULT 0;
+
+ALTER TABLE saved_calculations
+ADD COLUMN IF NOT EXISTS transport_cost_per_ton NUMERIC(18,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE saved_calculations
+ADD COLUMN IF NOT EXISTS transport_cost_total NUMERIC(18,2) NOT NULL DEFAULT 0;
 
 ALTER TABLE saved_calculations
 ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id) ON DELETE SET NULL;

@@ -1402,7 +1402,8 @@ def recipe_version_calculate_page(
     overhead_percent: float = 20.0,
     mixing_cost_per_ton: float = 0.0,
     packaging_type_id: str | None = None,
-    customer_id: str | None = None
+    customer_id: str | None = None,
+    transport_scheme_id: str | None = None
 ):
     with conn.cursor() as cursor:
         cursor.execute("""
@@ -1465,6 +1466,28 @@ def recipe_version_calculate_page(
                 "name": c[1]
             })
 
+        cursor.execute("""
+            SELECT
+                ts.id,
+                ts.name,
+                ts.capacity_tons,
+                tt.name
+            FROM transport_schemes ts
+            LEFT JOIN transport_types tt ON tt.id = ts.transport_type_id
+            WHERE ts.is_active = TRUE
+            ORDER BY ts.name
+        """)
+        transport_rows = cursor.fetchall()
+
+        transport_schemes = []
+        for t in transport_rows:
+            transport_schemes.append({
+                "id": t[0],
+                "name": t[1],
+                "capacity_tons": float(t[2]) if t[2] is not None else None,
+                "transport_type": t[3]
+            })
+
         selected_packaging = None
         if packaging_type_id:
             cursor.execute("""
@@ -1481,6 +1504,59 @@ def recipe_version_calculate_page(
                     "capacity_unit": p[3],
                     "cost_per_ton": float(p[4]),
                     "package_price": float(p[5]),
+                }
+
+        selected_transport_scheme = None
+        if transport_scheme_id:
+            cursor.execute("""
+                SELECT
+                    ts.id,
+                    ts.name,
+                    ts.capacity_tons,
+                    tt.name
+                FROM transport_schemes ts
+                LEFT JOIN transport_types tt ON tt.id = ts.transport_type_id
+                WHERE ts.id = %s
+            """, (transport_scheme_id,))
+            t = cursor.fetchone()
+            if t:
+                selected_transport_scheme = {
+                    "id": t[0],
+                    "name": t[1],
+                    "capacity_tons": float(t[2]) if t[2] is not None else None,
+                    "transport_type": t[3]
+                }
+
+        selected_transport_rate = None
+        if customer_id and transport_scheme_id:
+            cursor.execute("""
+                SELECT
+                    price,
+                    currency,
+                    price_per,
+                    valid_from,
+                    valid_to,
+                    includes_loading,
+                    includes_unloading,
+                    includes_packaging
+                FROM transport_rate_history
+                WHERE customer_id = %s
+                  AND transport_scheme_id = %s
+                  AND valid_to IS NULL
+                ORDER BY valid_from DESC
+                LIMIT 1
+            """, (customer_id, transport_scheme_id))
+            tr = cursor.fetchone()
+            if tr:
+                selected_transport_rate = {
+                    "price": float(tr[0]),
+                    "currency": tr[1],
+                    "price_per": tr[2],
+                    "valid_from": str(tr[3]) if tr[3] else None,
+                    "valid_to": str(tr[4]) if tr[4] else None,
+                    "includes_loading": tr[5],
+                    "includes_unloading": tr[6],
+                    "includes_packaging": tr[7],
                 }
 
         cursor.execute("""
@@ -1579,14 +1655,39 @@ def recipe_version_calculate_page(
 
             if capacity_unit == "т":
                 capacity_tons = capacity_value
-            elif capacity_unit == "kg" or capacity_unit == "кг":
+            elif capacity_unit in ("kg", "кг"):
                 capacity_tons = capacity_value / 1000.0
 
             if capacity_tons and capacity_tons > 0:
                 package_count = total_final_quantity / capacity_tons
                 packaging_material_cost_total = package_count * selected_packaging["package_price"]
 
-    overhead_base = direct_cost + mixing_cost_total + packaging_work_cost_total + packaging_material_cost_total
+    transport_cost_total = 0.0
+    transport_units_count = 0.0
+    transport_cost_per_ton = 0.0
+
+    if selected_transport_rate and selected_transport_scheme and total_final_quantity > 0:
+        price = selected_transport_rate["price"]
+        price_per = selected_transport_rate["price_per"]
+        capacity_tons = selected_transport_scheme["capacity_tons"]
+
+        if price_per == "ton":
+            transport_cost_total = total_final_quantity * price
+            transport_cost_per_ton = price
+
+        elif price_per in ("trip", "wagon"):
+            if capacity_tons and capacity_tons > 0:
+                transport_units_count = total_final_quantity / capacity_tons
+                transport_cost_total = transport_units_count * price
+                transport_cost_per_ton = transport_cost_total / total_final_quantity if total_final_quantity > 0 else 0.0
+
+    overhead_base = (
+        direct_cost
+        + mixing_cost_total
+        + packaging_work_cost_total
+        + packaging_material_cost_total
+        + transport_cost_total
+    )
     overhead_cost = overhead_base * overhead_percent / 100.0
     total_cost = overhead_base + overhead_cost
 
@@ -1599,9 +1700,13 @@ def recipe_version_calculate_page(
             "items": items,
             "packaging_types": packaging_types,
             "selected_packaging_type_id": packaging_type_id,
+            "selected_packaging": selected_packaging,
             "customers": customers,
             "selected_customer_id": customer_id,
-            "selected_packaging": selected_packaging,
+            "transport_schemes": transport_schemes,
+            "selected_transport_scheme_id": transport_scheme_id,
+            "selected_transport_scheme": selected_transport_scheme,
+            "selected_transport_rate": selected_transport_rate,
             "overhead_percent": overhead_percent,
             "mixing_cost_per_ton": mixing_cost_per_ton,
             "direct_cost": round(direct_cost, 2),
@@ -1609,6 +1714,9 @@ def recipe_version_calculate_page(
             "packaging_work_cost_total": round(packaging_work_cost_total, 2),
             "packaging_material_cost_total": round(packaging_material_cost_total, 2),
             "package_count": round(package_count, 3),
+            "transport_units_count": round(transport_units_count, 3),
+            "transport_cost_per_ton": round(transport_cost_per_ton, 2),
+            "transport_cost_total": round(transport_cost_total, 2),
             "overhead_cost": round(overhead_cost, 2),
             "total_cost": round(total_cost, 2),
         }
@@ -1728,7 +1836,8 @@ def save_recipe_version_calculation(
     overhead_percent: float = Form(...),
     mixing_cost_per_ton: float = Form(...),
     packaging_type_id: str = Form(""),
-    customer_id: str = Form("")
+    customer_id: str = Form(""),
+    transport_scheme_id: str = Form("")
 ):
     with conn.cursor() as cursor:
         cursor.execute("""
@@ -1754,7 +1863,6 @@ def save_recipe_version_calculation(
         recipe_name = row[4]
 
         customer_name = None
-
         if customer_id:
             cursor.execute("""
                 SELECT name
@@ -1762,7 +1870,6 @@ def save_recipe_version_calculation(
                 WHERE id = %s
             """, (customer_id,))
             c = cursor.fetchone()
-
             if c:
                 customer_name = c[0]
 
@@ -1782,6 +1889,49 @@ def save_recipe_version_calculation(
                     "capacity_unit": p[3],
                     "cost_per_ton": float(p[4]),
                     "package_price": float(p[5]),
+                }
+
+        selected_transport_scheme = None
+        if transport_scheme_id:
+            cursor.execute("""
+                SELECT
+                    ts.id,
+                    ts.name,
+                    ts.capacity_tons,
+                    tt.name
+                FROM transport_schemes ts
+                LEFT JOIN transport_types tt ON tt.id = ts.transport_type_id
+                WHERE ts.id = %s
+            """, (transport_scheme_id,))
+            t = cursor.fetchone()
+            if t:
+                selected_transport_scheme = {
+                    "id": t[0],
+                    "name": t[1],
+                    "capacity_tons": float(t[2]) if t[2] is not None else None,
+                    "transport_type": t[3]
+                }
+
+        selected_transport_rate = None
+        if customer_id and transport_scheme_id:
+            cursor.execute("""
+                SELECT
+                    price,
+                    currency,
+                    price_per
+                FROM transport_rate_history
+                WHERE customer_id = %s
+                  AND transport_scheme_id = %s
+                  AND valid_to IS NULL
+                ORDER BY valid_from DESC
+                LIMIT 1
+            """, (customer_id, transport_scheme_id))
+            tr = cursor.fetchone()
+            if tr:
+                selected_transport_rate = {
+                    "price": float(tr[0]),
+                    "currency": tr[1],
+                    "price_per": tr[2],
                 }
 
         cursor.execute("""
@@ -1879,75 +2029,117 @@ def save_recipe_version_calculation(
 
             if capacity_unit == "т":
                 capacity_tons = capacity_value
-            elif capacity_unit == "kg" or capacity_unit == "кг":
+            elif capacity_unit in ("kg", "кг"):
                 capacity_tons = capacity_value / 1000.0
 
             if capacity_tons and capacity_tons > 0:
                 package_count = total_final_quantity / capacity_tons
                 packaging_material_cost_total = package_count * selected_packaging["package_price"]
 
-    overhead_base = direct_cost + mixing_cost_total + packaging_work_cost_total + packaging_material_cost_total
+    transport_cost_total = 0.0
+    transport_units_count = 0.0
+    transport_cost_per_ton = 0.0
+
+    if selected_transport_rate and selected_transport_scheme and total_final_quantity > 0:
+        price = selected_transport_rate["price"]
+        price_per = selected_transport_rate["price_per"]
+        capacity_tons = selected_transport_scheme["capacity_tons"]
+
+        if price_per == "ton":
+            transport_cost_total = total_final_quantity * price
+            transport_cost_per_ton = price
+
+        elif price_per in ("trip", "wagon"):
+            if capacity_tons and capacity_tons > 0:
+                transport_units_count = total_final_quantity / capacity_tons
+                transport_cost_total = transport_units_count * price
+                transport_cost_per_ton = transport_cost_total / total_final_quantity if total_final_quantity > 0 else 0.0
+
+    overhead_base = (
+        direct_cost
+        + mixing_cost_total
+        + packaging_work_cost_total
+        + packaging_material_cost_total
+        + transport_cost_total
+    )
     overhead_cost = overhead_base * overhead_percent / 100.0
     total_cost = overhead_base + overhead_cost
 
     with conn.cursor() as cursor:
         cursor.execute("""
-           INSERT INTO saved_calculations (
-               recipe_id,
-               recipe_version_id,
-               customer_id,
-               customer_name_snapshot,
-               recipe_name_snapshot,
-               version_number_snapshot,
-               version_name_snapshot,
-               overhead_percent,
-               mixing_cost_per_ton,
-               packaging_type_id,
-               packaging_name_snapshot,
-               packaging_capacity_value_snapshot,
-               packaging_capacity_unit_snapshot,
-               packaging_cost_per_ton_snapshot,
-               package_price_snapshot,
-               direct_cost,
-               mixing_cost_total,
-               packaging_work_cost_total,
-               packaging_material_cost_total,
-               overhead_cost,
-               total_cost,
-               total_final_quantity,
-               package_count
-           )
-           VALUES (
-               %s,%s,%s,%s,%s,%s,%s,
-               %s,%s,%s,%s,%s,%s,%s,%s,
-               %s,%s,%s,%s,%s,%s,%s,%s
-           )
-           RETURNING id
-       """, (
-           recipe_id,
-           recipe_version_id,
-           customer_id if customer_id else None,
-           customer_name,
-           recipe_name,
-           version_number,
-           version_name,
-           overhead_percent,
-           mixing_cost_per_ton,
-           selected_packaging["id"] if selected_packaging else None,
-           selected_packaging["name"] if selected_packaging else None,
-           selected_packaging["capacity_value"] if selected_packaging else None,
-           selected_packaging["capacity_unit"] if selected_packaging else None,
-           selected_packaging["cost_per_ton"] if selected_packaging else 0,
-           selected_packaging["package_price"] if selected_packaging else 0,
-           direct_cost,
-           mixing_cost_total,
-           packaging_work_cost_total,
-           packaging_material_cost_total,
-           overhead_cost,
-           total_cost,
-           total_final_quantity,
-           package_count
-       ))
+            INSERT INTO saved_calculations (
+                recipe_id,
+                recipe_version_id,
+                customer_id,
+                customer_name_snapshot,
+                recipe_name_snapshot,
+                version_number_snapshot,
+                version_name_snapshot,
+                overhead_percent,
+                mixing_cost_per_ton,
+                packaging_type_id,
+                packaging_name_snapshot,
+                packaging_capacity_value_snapshot,
+                packaging_capacity_unit_snapshot,
+                packaging_cost_per_ton_snapshot,
+                package_price_snapshot,
+                transport_scheme_id,
+                transport_scheme_name_snapshot,
+                transport_rate_snapshot,
+                transport_rate_price_per_snapshot,
+                transport_capacity_tons_snapshot,
+                transport_units_count,
+                transport_cost_per_ton,
+                transport_cost_total,
+                direct_cost,
+                mixing_cost_total,
+                packaging_work_cost_total,
+                packaging_material_cost_total,
+                overhead_cost,
+                total_cost,
+                total_final_quantity,
+                package_count
+            )
+            VALUES (
+                %s,%s,%s,%s,%s,%s,%s,
+                %s,%s,%s,%s,%s,%s,%s,%s,
+                %s,%s,%s,%s,%s,%s,%s,%s,
+                %s,%s,%s,%s,%s,%s,%s,%s
+            )
+            RETURNING id
+        """, (
+            recipe_id,
+            recipe_version_id,
+            customer_id if customer_id else None,
+            customer_name,
+            recipe_name,
+            version_number,
+            version_name,
+            overhead_percent,
+            mixing_cost_per_ton,
+            selected_packaging["id"] if selected_packaging else None,
+            selected_packaging["name"] if selected_packaging else None,
+            selected_packaging["capacity_value"] if selected_packaging else None,
+            selected_packaging["capacity_unit"] if selected_packaging else None,
+            selected_packaging["cost_per_ton"] if selected_packaging else 0,
+            selected_packaging["package_price"] if selected_packaging else 0,
+            selected_transport_scheme["id"] if selected_transport_scheme else None,
+            selected_transport_scheme["name"] if selected_transport_scheme else None,
+            selected_transport_rate["price"] if selected_transport_rate else 0,
+            selected_transport_rate["price_per"] if selected_transport_rate else None,
+            selected_transport_scheme["capacity_tons"] if selected_transport_scheme else None,
+            transport_units_count,
+            transport_cost_per_ton,
+            transport_cost_total,
+            direct_cost,
+            mixing_cost_total,
+            packaging_work_cost_total,
+            packaging_material_cost_total,
+            overhead_cost,
+            total_cost,
+            total_final_quantity,
+            package_count
+        ))
         saved_calculation_id = cursor.fetchone()[0]
 
         for item in item_snapshots:

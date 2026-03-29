@@ -32,16 +32,29 @@
                 {% endfor %}
             </select>
         </div>
+
         <div class="form-group">
-           <label>Потребитель</label>
-           <select name="customer_id">
+            <label>Потребитель</label>
+            <select name="customer_id">
                 <option value="">Не выбран</option>
                 {% for c in customers %}
                 <option value="{{ c.id }}" {% if selected_customer_id == c.id %}selected{% endif %}>
                     {{ c.name }}
                 </option>
                 {% endfor %}
-           </select>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Схема транспорта</label>
+            <select name="transport_scheme_id">
+                <option value="">Не выбрана</option>
+                {% for t in transport_schemes %}
+                <option value="{{ t.id }}" {% if selected_transport_scheme_id == t.id %}selected{% endif %}>
+                    {{ t.name }}
+                </option>
+                {% endfor %}
+            </select>
         </div>
     </div>
 
@@ -118,6 +131,61 @@
 </div>
 {% endif %}
 
+{% if selected_transport_scheme %}
+<div style="margin-top: 24px;">
+    <table>
+        <tbody>
+            <tr>
+                <th>Схема транспорта</th>
+                <td>{{ selected_transport_scheme.name }}</td>
+            </tr>
+            <tr>
+                <th>Тип транспорта</th>
+                <td>{{ selected_transport_scheme.transport_type or "—" }}</td>
+            </tr>
+            <tr>
+                <th>Вместимость</th>
+                <td>
+                    {% if selected_transport_scheme.capacity_tons %}
+                        {{ selected_transport_scheme.capacity_tons }} т
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+
+            {% if selected_transport_rate %}
+            <tr>
+                <th>Ставка</th>
+                <td>{{ selected_transport_rate.price }} {{ selected_transport_rate.currency }}</td>
+            </tr>
+            <tr>
+                <th>Тип ставки</th>
+                <td>{{ selected_transport_rate.price_per }}</td>
+            </tr>
+            <tr>
+                <th>Транспортных единиц</th>
+                <td>{{ transport_units_count }}</td>
+            </tr>
+            <tr>
+                <th>Транспорт, руб/т</th>
+                <td>{{ transport_cost_per_ton }}</td>
+            </tr>
+            <tr>
+                <th>Транспорт всего</th>
+                <td>{{ transport_cost_total }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <th>Ставка</th>
+                <td>Не найдена активная ставка для выбранного клиента и схемы</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
 <div style="margin-top: 24px;">
     <table>
         <tbody>
@@ -138,6 +206,10 @@
                 <td>{{ packaging_material_cost_total }}</td>
             </tr>
             <tr>
+                <th>Транспорт</th>
+                <td>{{ transport_cost_total }}</td>
+            </tr>
+            <tr>
                 <th>Постоянные затраты ({{ overhead_percent }}%)</th>
                 <td>{{ overhead_cost }}</td>
             </tr>
@@ -148,12 +220,15 @@
         </tbody>
     </table>
 </div>
+
 <div style="margin-top:20px;">
     <form method="post" action="/recipe-versions/{{ version.id }}/save-calculation">
         <input type="hidden" name="overhead_percent" value="{{ overhead_percent }}">
         <input type="hidden" name="mixing_cost_per_ton" value="{{ mixing_cost_per_ton }}">
         <input type="hidden" name="packaging_type_id" value="{{ selected_packaging_type_id }}">
         <input type="hidden" name="customer_id" value="{{ selected_customer_id }}">
+        <input type="hidden" name="transport_scheme_id" value="{{ selected_transport_scheme_id }}">
+
         <button class="btn" type="submit">
             Сохранить расчет
         </button>
