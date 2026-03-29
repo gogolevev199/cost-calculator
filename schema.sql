@@ -137,11 +137,20 @@ CREATE TABLE IF NOT EXISTS recipe_item_processes (
     comment TEXT
 );
 
+ALTER TABLE recipe_item_processes
+ADD COLUMN IF NOT EXISTS operation_id UUID
+REFERENCES operations(id);
+
+
 CREATE INDEX IF NOT EXISTS idx_recipe_item_processes_recipe_item_id
     ON recipe_item_processes(recipe_item_id);
 
 CREATE INDEX IF NOT EXISTS idx_recipe_item_processes_process_id
     ON recipe_item_processes(process_id);
+
+CREATE INDEX IF NOT EXISTS idx_recipe_item_processes_operation_id
+ON recipe_item_processes(operation_id);
+
 
 CREATE INDEX IF NOT EXISTS idx_recipe_items_recipe_version_id
     ON recipe_items(recipe_version_id);
@@ -572,3 +581,10 @@ CREATE TRIGGER trg_operations_updated_at
 BEFORE UPDATE ON operations
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
+
+ALTER TABLE processes
+ADD COLUMN IF NOT EXISTS operation_id UUID
+REFERENCES operations(id);
+
+CREATE INDEX IF NOT EXISTS idx_processes_operation_id
+ON processes(operation_id);
