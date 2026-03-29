@@ -1982,3 +1982,100 @@ def save_recipe_version_calculation(
         url="/saved-calculations-page",
         status_code=303
     )
+@app.get("/saved-calculations/{calc_id}", response_class=HTMLResponse)
+def saved_calculation_details_page(request: Request, calc_id: str):
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                id,
+                recipe_name_snapshot,
+                customer_name_snapshot,
+                version_number_snapshot,
+                version_name_snapshot,
+                packaging_name_snapshot,
+                overhead_percent,
+                mixing_cost_per_ton,
+                packaging_capacity_value_snapshot,
+                packaging_capacity_unit_snapshot,
+                packaging_cost_per_ton_snapshot,
+                package_price_snapshot,
+                direct_cost,
+                mixing_cost_total,
+                packaging_work_cost_total,
+                packaging_material_cost_total,
+                overhead_cost,
+                total_cost,
+                total_final_quantity,
+                package_count,
+                created_at
+            FROM saved_calculations
+            WHERE id = %s
+        """, (calc_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            return RedirectResponse("/saved-calculations-page", status_code=303)
+
+        calc = {
+            "id": row[0],
+            "recipe_name": row[1],
+            "customer_name": row[2],
+            "version_number": row[3],
+            "version_name": row[4],
+            "packaging_name": row[5],
+            "overhead_percent": float(row[6]),
+            "mixing_cost_per_ton": float(row[7]),
+            "packaging_capacity_value": float(row[8]) if row[8] is not None else None,
+            "packaging_capacity_unit": row[9],
+            "packaging_cost_per_ton": float(row[10]),
+            "package_price": float(row[11]),
+            "direct_cost": float(row[12]),
+            "mixing_cost_total": float(row[13]),
+            "packaging_work_cost_total": float(row[14]),
+            "packaging_material_cost_total": float(row[15]),
+            "overhead_cost": float(row[16]),
+            "total_cost": float(row[17]),
+            "total_final_quantity": float(row[18]),
+            "package_count": float(row[19]),
+            "created_at": str(row[20]),
+        }
+
+        cursor.execute("""
+            SELECT
+                material_name_snapshot,
+                base_quantity,
+                total_loss,
+                final_quantity,
+                material_price_snapshot,
+                material_cost,
+                total_process_cost,
+                process_cost,
+                total_cost
+            FROM saved_calculation_items
+            WHERE saved_calculation_id = %s
+            ORDER BY material_name_snapshot
+        """, (calc_id,))
+        rows = cursor.fetchall()
+
+    items = []
+    for row in rows:
+        items.append({
+            "material_name": row[0],
+            "base_quantity": float(row[1]),
+            "total_loss": float(row[2]),
+            "final_quantity": float(row[3]),
+            "material_price": float(row[4]),
+            "material_cost": float(row[5]),
+            "total_process_cost": float(row[6]),
+            "process_cost": float(row[7]),
+            "total_cost": float(row[8]),
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "saved_calculation_details.html",
+        {
+            "calc": calc,
+            "items": items
+        }
+    )

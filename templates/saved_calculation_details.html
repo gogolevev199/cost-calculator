@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Сохраненный расчет{% endblock %}
+
+{% block content %}
+<h1>Сохраненный расчет</h1>
+<p class="muted">
+    Рецептура: <strong>{{ calc.recipe_name }}</strong><br>
+    Версия: <strong>{{ calc.version_number }}</strong>{% if calc.version_name %} — {{ calc.version_name }}{% endif %}<br>
+    Потребитель: <strong>{{ calc.customer_name or "—" }}</strong><br>
+    Дата сохранения: <strong>{{ calc.created_at }}</strong>
+</p>
+
+<div style="margin: 16px 0 20px 0;">
+    <a href="/saved-calculations-page">Назад к архиву</a>
+</div>
+
+<table>
+    <tbody>
+        <tr>
+            <th>Фасовка</th>
+            <td>{{ calc.packaging_name or "—" }}</td>
+        </tr>
+        <tr>
+            <th>Постоянные затраты, %</th>
+            <td>{{ calc.overhead_percent }}</td>
+        </tr>
+        <tr>
+            <th>Смешивание, руб/т</th>
+            <td>{{ calc.mixing_cost_per_ton }}</td>
+        </tr>
+        <tr>
+            <th>Вместимость упаковки</th>
+            <td>
+                {% if calc.packaging_capacity_value %}
+                    {{ calc.packaging_capacity_value }} {{ calc.packaging_capacity_unit }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Фасовка, руб/т</th>
+            <td>{{ calc.packaging_cost_per_ton }}</td>
+        </tr>
+        <tr>
+            <th>Упаковка, руб/ед.</th>
+            <td>{{ calc.package_price }}</td>
+        </tr>
+        <tr>
+            <th>Количество упаковок</th>
+            <td>{{ calc.package_count }}</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3 style="margin-top: 24px;">Компоненты</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Материал</th>
+            <th>Базовое количество</th>
+            <th>Общий коэф. потерь</th>
+            <th>Итоговое количество</th>
+            <th>Цена сырья</th>
+            <th>Стоимость сырья</th>
+            <th>Сумма переделов</th>
+            <th>Стоимость переделов</th>
+            <th>Итого</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ item.material_name }}</td>
+            <td>{{ item.base_quantity }}</td>
+            <td>{{ item.total_loss }}</td>
+            <td>{{ item.final_quantity }}</td>
+            <td>{{ item.material_price }}</td>
+            <td>{{ item.material_cost }}</td>
+            <td>{{ item.total_process_cost }}</td>
+            <td>{{ item.process_cost }}</td>
+            <td>{{ item.total_cost }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="margin-top: 24px;">
+    <table>
+        <tbody>
+            <tr>
+                <th>Прямая производственная себестоимость</th>
+                <td>{{ calc.direct_cost }}</td>
+            </tr>
+            <tr>
+                <th>Смешивание</th>
+                <td>{{ calc.mixing_cost_total }}</td>
+            </tr>
+            <tr>
+                <th>Фасовка (работа)</th>
+                <td>{{ calc.packaging_work_cost_total }}</td>
+            </tr>
+            <tr>
+                <th>Упаковка (материалы)</th>
+                <td>{{ calc.packaging_material_cost_total }}</td>
+            </tr>
+            <tr>
+                <th>Постоянные затраты</th>
+                <td>{{ calc.overhead_cost }}</td>
+            </tr>
+            <tr>
+                <th>Итоговая себестоимость</th>
+                <td><strong>{{ calc.total_cost }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
