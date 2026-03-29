@@ -137,4 +137,15 @@
         </tbody>
     </table>
 </div>
+<div style="margin-top:20px;">
+    <form method="post" action="/recipe-versions/{{ version.id }}/save-calculation">
+        <input type="hidden" name="overhead_percent" value="{{ overhead_percent }}">
+        <input type="hidden" name="mixing_cost_per_ton" value="{{ mixing_cost_per_ton }}">
+        <input type="hidden" name="packaging_type_id" value="{{ selected_packaging_type_id }}">
+
+        <button class="btn" type="submit">
+            Сохранить расчет
+        </button>
+    </form>
+</div>
 {% endblock %}

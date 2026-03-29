@@ -1703,3 +1703,245 @@ def saved_calculations_page(request: Request):
             "calculations": calculations
         }
     )
+@app.post("/recipe-versions/{version_id}/save-calculation")
+def save_recipe_version_calculation(
+    version_id: str,
+    overhead_percent: float = Form(...),
+    mixing_cost_per_ton: float = Form(...),
+    packaging_type_id: str = Form("")
+):
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                rv.id,
+                rv.version_number,
+                rv.version_name,
+                r.id,
+                r.name
+            FROM recipe_versions rv
+            JOIN recipes r ON r.id = rv.recipe_id
+            WHERE rv.id = %s
+        """, (version_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            return RedirectResponse("/recipes-page", status_code=303)
+
+        recipe_version_id = row[0]
+        version_number = row[1]
+        version_name = row[2]
+        recipe_id = row[3]
+        recipe_name = row[4]
+
+        selected_packaging = None
+        if packaging_type_id:
+            cursor.execute("""
+                SELECT id, name, capacity_value, capacity_unit, cost_per_ton, package_price
+                FROM packaging_types
+                WHERE id = %s
+            """, (packaging_type_id,))
+            p = cursor.fetchone()
+            if p:
+                selected_packaging = {
+                    "id": p[0],
+                    "name": p[1],
+                    "capacity_value": float(p[2]) if p[2] is not None else None,
+                    "capacity_unit": p[3],
+                    "cost_per_ton": float(p[4]),
+                    "package_price": float(p[5]),
+                }
+
+        cursor.execute("""
+            SELECT
+                ri.id,
+                m.name,
+                ri.quantity,
+                COALESCE(mp.price, m.default_price, 0) AS material_price
+            FROM recipe_items ri
+            JOIN materials m ON m.id = ri.material_id
+            LEFT JOIN LATERAL (
+                SELECT price
+                FROM material_price_history
+                WHERE material_id = m.id
+                  AND valid_to IS NULL
+                ORDER BY valid_from DESC
+                LIMIT 1
+            ) mp ON TRUE
+            WHERE ri.recipe_version_id = %s
+            ORDER BY m.name
+        """, (version_id,))
+        item_rows = cursor.fetchall()
+
+    item_snapshots = []
+    direct_cost = 0.0
+    total_final_quantity = 0.0
+
+    for row in item_rows:
+        item_id = row[0]
+        material_name = row[1]
+        base_quantity = float(row[2])
+        material_price = float(row[3] or 0)
+
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                    rip.loss_coefficient,
+                    COALESCE(pch.cost, p.default_cost, 0) AS process_cost
+                FROM recipe_item_processes rip
+                JOIN processes p ON p.id = rip.process_id
+                LEFT JOIN LATERAL (
+                    SELECT cost
+                    FROM process_cost_history
+                    WHERE process_id = p.id
+                      AND valid_to IS NULL
+                    ORDER BY valid_from DESC
+                    LIMIT 1
+                ) pch ON TRUE
+                WHERE rip.recipe_item_id = %s
+                ORDER BY rip.sort_order, p.name
+            """, (item_id,))
+            process_rows = cursor.fetchall()
+
+        total_loss = 1.0
+        total_process_cost = 0.0
+
+        for p in process_rows:
+            total_loss *= float(p[0] or 1)
+            total_process_cost += float(p[1] or 0)
+
+        final_quantity = base_quantity * total_loss
+        material_cost = final_quantity * material_price
+        process_cost = final_quantity * total_process_cost
+        total_item_cost = material_cost + process_cost
+
+        direct_cost += total_item_cost
+        total_final_quantity += final_quantity
+
+        item_snapshots.append({
+            "material_name": material_name,
+            "base_quantity": base_quantity,
+            "total_loss": total_loss,
+            "final_quantity": final_quantity,
+            "material_price": material_price,
+            "material_cost": material_cost,
+            "total_process_cost": total_process_cost,
+            "process_cost": process_cost,
+            "total_cost": total_item_cost,
+        })
+
+    mixing_cost_total = total_final_quantity * mixing_cost_per_ton
+
+    packaging_work_cost_total = 0.0
+    packaging_material_cost_total = 0.0
+    package_count = 0.0
+
+    if selected_packaging:
+        packaging_work_cost_total = total_final_quantity * selected_packaging["cost_per_ton"]
+
+        capacity_value = selected_packaging["capacity_value"]
+        capacity_unit = selected_packaging["capacity_unit"]
+
+        if capacity_value and capacity_value > 0:
+            capacity_tons = None
+
+            if capacity_unit == "т":
+                capacity_tons = capacity_value
+            elif capacity_unit == "kg" or capacity_unit == "кг":
+                capacity_tons = capacity_value / 1000.0
+
+            if capacity_tons and capacity_tons > 0:
+                package_count = total_final_quantity / capacity_tons
+                packaging_material_cost_total = package_count * selected_packaging["package_price"]
+
+    overhead_base = direct_cost + mixing_cost_total + packaging_work_cost_total + packaging_material_cost_total
+    overhead_cost = overhead_base * overhead_percent / 100.0
+    total_cost = overhead_base + overhead_cost
+
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO saved_calculations (
+                recipe_id,
+                recipe_version_id,
+                recipe_name_snapshot,
+                version_number_snapshot,
+                version_name_snapshot,
+                overhead_percent,
+                mixing_cost_per_ton,
+                packaging_type_id,
+                packaging_name_snapshot,
+                packaging_capacity_value_snapshot,
+                packaging_capacity_unit_snapshot,
+                packaging_cost_per_ton_snapshot,
+                package_price_snapshot,
+                direct_cost,
+                mixing_cost_total,
+                packaging_work_cost_total,
+                packaging_material_cost_total,
+                overhead_cost,
+                total_cost,
+                total_final_quantity,
+                package_count
+            )
+            VALUES (
+                %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s, %s, %s
+            )
+            RETURNING id
+        """, (
+            recipe_id,
+            recipe_version_id,
+            recipe_name,
+            version_number,
+            version_name,
+            overhead_percent,
+            mixing_cost_per_ton,
+            selected_packaging["id"] if selected_packaging else None,
+            selected_packaging["name"] if selected_packaging else None,
+            selected_packaging["capacity_value"] if selected_packaging else None,
+            selected_packaging["capacity_unit"] if selected_packaging else None,
+            selected_packaging["cost_per_ton"] if selected_packaging else 0,
+            selected_packaging["package_price"] if selected_packaging else 0,
+            direct_cost,
+            mixing_cost_total,
+            packaging_work_cost_total,
+            packaging_material_cost_total,
+            overhead_cost,
+            total_cost,
+            total_final_quantity,
+            package_count
+        ))
+        saved_calculation_id = cursor.fetchone()[0]
+
+        for item in item_snapshots:
+            cursor.execute("""
+                INSERT INTO saved_calculation_items (
+                    saved_calculation_id,
+                    material_name_snapshot,
+                    base_quantity,
+                    total_loss,
+                    final_quantity,
+                    material_price_snapshot,
+                    material_cost,
+                    total_process_cost,
+                    process_cost,
+                    total_cost
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                saved_calculation_id,
+                item["material_name"],
+                item["base_quantity"],
+                item["total_loss"],
+                item["final_quantity"],
+                item["material_price"],
+                item["material_cost"],
+                item["total_process_cost"],
+                item["process_cost"],
+                item["total_cost"],
+            ))
+
+    return RedirectResponse(
+        url="/saved-calculations-page",
+        status_code=303
+    )
