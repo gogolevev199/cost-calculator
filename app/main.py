@@ -2349,3 +2349,204 @@ def saved_calculation_details_page(request: Request, calc_id: str):
             "items": items
         }
     )
+
+@app.get("/operations-page", response_class=HTMLResponse)
+def operations_page(request: Request):
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                o.id,
+                o.name,
+                o.code,
+                o.operation_group,
+                o.unit,
+                och.cost AS current_cost,
+                och.valid_from AS cost_date
+            FROM operations o
+            LEFT JOIN LATERAL (
+                SELECT cost, valid_from
+                FROM operation_cost_history
+                WHERE operation_id = o.id
+                  AND valid_to IS NULL
+                ORDER BY valid_from DESC
+                LIMIT 1
+            ) och ON TRUE
+            WHERE o.is_active = TRUE
+            ORDER BY o.name
+        """)
+        rows = cursor.fetchall()
+
+    operations = []
+    for row in rows:
+        operations.append({
+            "id": row[0],
+            "name": row[1],
+            "code": row[2],
+            "operation_group": row[3],
+            "unit": row[4],
+            "current_cost": float(row[5]) if row[5] is not None else None,
+            "cost_date": str(row[6]) if row[6] is not None else None,
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "operations.html",
+        {
+            "operations": operations
+        }
+    )
+
+
+@app.get("/operations/new", response_class=HTMLResponse)
+def operation_new_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "operation_form.html",
+        {}
+    )
+
+
+@app.post("/operations/new")
+def operation_create(
+    name: str = Form(...),
+    code: str = Form(""),
+    operation_group: str = Form("process"),
+    unit: str = Form("ton")
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO operations (name, code, operation_group, unit)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (
+                name,
+                code,
+                operation_group,
+                unit
+            )
+        )
+
+    return RedirectResponse(
+        url="/operations-page",
+        status_code=303
+    )
+
+
+@app.get("/operations/{operation_id}/costs", response_class=HTMLResponse)
+def operation_costs_page(request: Request, operation_id: str):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id, name FROM operations WHERE id = %s",
+            (operation_id,)
+        )
+        operation_row = cursor.fetchone()
+
+        if not operation_row:
+            return RedirectResponse("/operations-page", status_code=303)
+
+        operation = {
+            "id": operation_row[0],
+            "name": operation_row[1]
+        }
+
+        cursor.execute("""
+            SELECT
+                cost,
+                currency,
+                valid_from,
+                valid_to,
+                comment
+            FROM operation_cost_history
+            WHERE operation_id = %s
+            ORDER BY valid_from DESC
+        """, (operation_id,))
+        rows = cursor.fetchall()
+
+    costs = []
+    for row in rows:
+        costs.append({
+            "cost": float(row[0]),
+            "currency": row[1],
+            "valid_from": str(row[2]),
+            "valid_to": str(row[3]) if row[3] else None,
+            "comment": row[4]
+        })
+
+    return templates.TemplateResponse(
+        request,
+        "operation_costs.html",
+        {
+            "operation": operation,
+            "costs": costs
+        }
+    )
+
+
+@app.get("/operations/{operation_id}/costs/new", response_class=HTMLResponse)
+def operation_cost_new_page(request: Request, operation_id: str):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id, name FROM operations WHERE id = %s",
+            (operation_id,)
+        )
+        operation_row = cursor.fetchone()
+
+    if not operation_row:
+        return RedirectResponse("/operations-page", status_code=303)
+
+    operation = {
+        "id": operation_row[0],
+        "name": operation_row[1]
+    }
+
+    return templates.TemplateResponse(
+        request,
+        "operation_cost_form.html",
+        {
+            "operation": operation
+        }
+    )
+
+
+@app.post("/operations/{operation_id}/costs/new")
+def operation_cost_create(
+    operation_id: str,
+    cost: float = Form(...),
+    currency: str = Form("RUB"),
+    valid_from: str = Form(...),
+    comment: str = Form("")
+):
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id FROM operations WHERE id = %s",
+            (operation_id,)
+        )
+        operation_row = cursor.fetchone()
+
+        if not operation_row:
+            return RedirectResponse("/operations-page", status_code=303)
+
+        cursor.execute(
+            """
+            UPDATE operation_cost_history
+            SET valid_to = %s::date - INTERVAL '1 day'
+            WHERE operation_id = %s
+              AND valid_to IS NULL
+            """,
+            (valid_from, operation_id)
+        )
+
+        cursor.execute(
+            """
+            INSERT INTO operation_cost_history
+            (operation_id, cost, currency, valid_from, valid_to, comment)
+            VALUES (%s, %s, %s, %s, NULL, %s)
+            """,
+            (operation_id, cost, currency, valid_from, comment)
+        )
+
+    return RedirectResponse(
+        url=f"/operations/{operation_id}/costs",
+        status_code=303
+    )
