@@ -406,3 +406,48 @@ CREATE TRIGGER trg_packaging_types_updated_at
 BEFORE UPDATE ON packaging_types
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
+CREATE TABLE IF NOT EXISTS saved_calculations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    recipe_id UUID REFERENCES recipes(id) ON DELETE SET NULL,
+    recipe_version_id UUID REFERENCES recipe_versions(id) ON DELETE SET NULL,
+    recipe_name_snapshot VARCHAR(255) NOT NULL,
+    version_number_snapshot INTEGER,
+    version_name_snapshot VARCHAR(255),
+    overhead_percent NUMERIC(18,4) NOT NULL DEFAULT 20,
+    mixing_cost_per_ton NUMERIC(18,2) NOT NULL DEFAULT 0,
+    packaging_type_id UUID REFERENCES packaging_types(id) ON DELETE SET NULL,
+    packaging_name_snapshot VARCHAR(255),
+    packaging_capacity_value_snapshot NUMERIC(18,3),
+    packaging_capacity_unit_snapshot VARCHAR(50),
+    packaging_cost_per_ton_snapshot NUMERIC(18,2) NOT NULL DEFAULT 0,
+    package_price_snapshot NUMERIC(18,2) NOT NULL DEFAULT 0,
+    direct_cost NUMERIC(18,2) NOT NULL DEFAULT 0,
+    mixing_cost_total NUMERIC(18,2) NOT NULL DEFAULT 0,
+    packaging_work_cost_total NUMERIC(18,2) NOT NULL DEFAULT 0,
+    packaging_material_cost_total NUMERIC(18,2) NOT NULL DEFAULT 0,
+    overhead_cost NUMERIC(18,2) NOT NULL DEFAULT 0,
+    total_cost NUMERIC(18,2) NOT NULL DEFAULT 0,
+    total_final_quantity NUMERIC(18,6) NOT NULL DEFAULT 0,
+    package_count NUMERIC(18,6) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS saved_calculation_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    saved_calculation_id UUID NOT NULL REFERENCES saved_calculations(id) ON DELETE CASCADE,
+    material_name_snapshot VARCHAR(255) NOT NULL,
+    base_quantity NUMERIC(18,6) NOT NULL,
+    total_loss NUMERIC(18,6) NOT NULL DEFAULT 1,
+    final_quantity NUMERIC(18,6) NOT NULL DEFAULT 0,
+    material_price_snapshot NUMERIC(18,2) NOT NULL DEFAULT 0,
+    material_cost NUMERIC(18,2) NOT NULL DEFAULT 0,
+    total_process_cost NUMERIC(18,2) NOT NULL DEFAULT 0,
+    process_cost NUMERIC(18,2) NOT NULL DEFAULT 0,
+    total_cost NUMERIC(18,2) NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_saved_calculations_created_at
+    ON saved_calculations(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_saved_calculation_items_calc_id
+    ON saved_calculation_items(saved_calculation_id);
