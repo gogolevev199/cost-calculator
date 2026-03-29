@@ -517,10 +517,18 @@ CREATE TABLE IF NOT EXISTS operations (
     code VARCHAR(100),
     operation_group VARCHAR(50) NOT NULL DEFAULT 'process',
     unit VARCHAR(50) NOT NULL DEFAULT 'ton',
+    default_loss_coefficient NUMERIC(18,6) NOT NULL DEFAULT 1,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE operations
+ADD COLUMN IF NOT EXISTS default_loss_coefficient NUMERIC(18,6) NOT NULL DEFAULT 1;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_operations_code
+    ON operations(code)
+    WHERE code IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_operations_name
     ON operations(name);

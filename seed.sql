@@ -72,11 +72,11 @@ VALUES
     ('Страховка', 'insurance', 'Страхование перевозки', TRUE)
 ON CONFLICT (code) DO NOTHING;
 
-INSERT INTO operations (name, code, operation_group, unit, is_active)
+INSERT INTO operations (name, code, operation_group, unit, default_loss_coefficient, is_active)
 VALUES
-    ('Смешивание', 'mixing', 'common', 'ton', TRUE),
-    ('Фасовка', 'packing', 'common', 'ton', TRUE),
-    ('Дробление', 'crushing', 'process', 'ton', TRUE),
-    ('Сушка', 'drying', 'process', 'ton', TRUE),
-    ('Помол', 'milling', 'process', 'ton', TRUE)
-ON CONFLICT DO NOTHING;
+    ('Смешивание', 'mixing', 'common', 'ton', 1.000000, TRUE),
+    ('Фасовка', 'packing', 'common', 'ton', 1.000000, TRUE),
+    ('Дробление', 'crushing', 'process', 'ton', 1.010000, TRUE),
+    ('Сушка', 'drying', 'process', 'ton', 1.030000, TRUE),
+    ('Помол', 'milling', 'process', 'ton', 1.020000, TRUE)
+ON CONFLICT (code) DO NOTHING;
