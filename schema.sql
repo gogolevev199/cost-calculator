@@ -588,3 +588,23 @@ REFERENCES operations(id);
 
 CREATE INDEX IF NOT EXISTS idx_processes_operation_id
 ON processes(operation_id);
+
+-- =========================================
+-- MIGRATION: processes -> operations
+-- =========================================
+
+UPDATE processes p
+SET operation_id = o.id
+FROM operations o
+WHERE p.operation_id IS NULL
+  AND (
+      LOWER(TRIM(p.code)) = LOWER(TRIM(o.code))
+      OR LOWER(TRIM(p.name)) = LOWER(TRIM(o.name))
+  );
+
+UPDATE recipe_item_processes rip
+SET operation_id = p.operation_id
+FROM processes p
+WHERE rip.process_id = p.id
+  AND rip.operation_id IS NULL
+  AND p.operation_id IS NOT NULL;
