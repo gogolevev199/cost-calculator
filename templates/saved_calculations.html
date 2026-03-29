@@ -14,6 +14,7 @@
             <th>Потребитель</th>
             <th>Версия</th>
             <th>Фасовка</th>
+            <th>Транспорт</th>
             <th>Постоянные, %</th>
             <th>Итоговая себестоимость</th>
             <th>Действия</th>
@@ -30,6 +31,7 @@
                 {% if c.version_name %} — {{ c.version_name }}{% endif %}
             </td>
             <td>{{ c.packaging_name or "—" }}</td>
+            <td>{{ c.transport_scheme_name or "—" }}</td>
             <td>{{ c.overhead_percent }}</td>
             <td>{{ c.total_cost }}</td>
             <td>

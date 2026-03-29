@@ -51,6 +51,34 @@
             <th>Количество упаковок</th>
             <td>{{ calc.package_count }}</td>
         </tr>
+        <tr>
+            <th>Схема транспорта</th>
+            <td>{{ calc.transport_scheme_name or "—" }}</td>
+        </tr>
+        <tr>
+            <th>Транспортная ставка</th>
+            <td>{{ calc.transport_rate }}</td>
+        </tr>
+        <tr>
+            <th>Тип ставки</th>
+            <td>{{ calc.transport_rate_price_per or "—" }}</td>
+        </tr>
+        <tr>
+            <th>Вместимость транспорта, т</th>
+            <td>{{ calc.transport_capacity_tons or "—" }}</td>
+        </tr>
+        <tr>
+            <th>Количество транспортных единиц</th>
+            <td>{{ calc.transport_units_count }}</td>
+        </tr>
+        <tr>
+            <th>Транспорт, руб/т</th>
+            <td>{{ calc.transport_cost_per_ton }}</td>
+        </tr>
+        <tr>
+            <th>Транспорт всего</th>
+            <td>{{ calc.transport_cost_total }}</td>
+        </tr>
     </tbody>
 </table>
 
@@ -105,6 +133,10 @@
             <tr>
                 <th>Упаковка (материалы)</th>
                 <td>{{ calc.packaging_material_cost_total }}</td>
+            </tr>
+            <tr>
+                <th>Транспорт</th>
+                <td>{{ calc.transport_cost_total }}</td>
             </tr>
             <tr>
                 <th>Постоянные затраты</th>
