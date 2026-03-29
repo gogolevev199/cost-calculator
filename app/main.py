@@ -1890,62 +1890,62 @@ def save_recipe_version_calculation(
 
     with conn.cursor() as cursor:
         cursor.execute("""
-            INSERT INTO saved_calculations (
-                recipe_id,
-                recipe_version_id,
-                customer_id,
-                customer_name_snapshot,
-                recipe_name_snapshot,
-                version_number_snapshot,
-                version_name_snapshot,
-                overhead_percent,
-                mixing_cost_per_ton,
-                packaging_type_id,
-                packaging_name_snapshot,
-                packaging_capacity_value_snapshot,
-                packaging_capacity_unit_snapshot,
-                packaging_cost_per_ton_snapshot,
-                package_price_snapshot,
-                direct_cost,
-                mixing_cost_total,
-                packaging_work_cost_total,
-                packaging_material_cost_total,
-                overhead_cost,
-                total_cost,
-                total_final_quantity,
-                package_count
-            )
-            VALUES (
-                %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, %s, %s, %s
-            )
-            RETURNING id
-        """, (
-            recipe_id,
-            recipe_version_id,
-            customer_id if customer_id else None,
-            customer_name,       
-            recipe_name,
-            version_number,
-            version_name,
-            overhead_percent,
-            mixing_cost_per_ton,
-            selected_packaging["id"] if selected_packaging else None,
-            selected_packaging["name"] if selected_packaging else None,
-            selected_packaging["capacity_value"] if selected_packaging else None,
-            selected_packaging["capacity_unit"] if selected_packaging else None,
-            selected_packaging["cost_per_ton"] if selected_packaging else 0,
-            selected_packaging["package_price"] if selected_packaging else 0,
-            direct_cost,
-            mixing_cost_total,
-            packaging_work_cost_total,
-            packaging_material_cost_total,
-            overhead_cost,
-            total_cost,
-            total_final_quantity,
-            package_count
-        ))
+           INSERT INTO saved_calculations (
+               recipe_id,
+               recipe_version_id,
+               customer_id,
+               customer_name_snapshot,
+               recipe_name_snapshot,
+               version_number_snapshot,
+               version_name_snapshot,
+               overhead_percent,
+               mixing_cost_per_ton,
+               packaging_type_id,
+               packaging_name_snapshot,
+               packaging_capacity_value_snapshot,
+               packaging_capacity_unit_snapshot,
+               packaging_cost_per_ton_snapshot,
+               package_price_snapshot,
+               direct_cost,
+               mixing_cost_total,
+               packaging_work_cost_total,
+               packaging_material_cost_total,
+               overhead_cost,
+               total_cost,
+               total_final_quantity,
+               package_count
+           )
+           VALUES (
+               %s,%s,%s,%s,%s,%s,%s,
+               %s,%s,%s,%s,%s,%s,%s,%s,
+               %s,%s,%s,%s,%s,%s,%s,%s
+           )
+           RETURNING id
+       """, (
+           recipe_id,
+           recipe_version_id,
+           customer_id if customer_id else None,
+           customer_name,
+           recipe_name,
+           version_number,
+           version_name,
+           overhead_percent,
+           mixing_cost_per_ton,
+           selected_packaging["id"] if selected_packaging else None,
+           selected_packaging["name"] if selected_packaging else None,
+           selected_packaging["capacity_value"] if selected_packaging else None,
+           selected_packaging["capacity_unit"] if selected_packaging else None,
+           selected_packaging["cost_per_ton"] if selected_packaging else 0,
+           selected_packaging["package_price"] if selected_packaging else 0,
+           direct_cost,
+           mixing_cost_total,
+           packaging_work_cost_total,
+           packaging_material_cost_total,
+           overhead_cost,
+           total_cost,
+           total_final_quantity,
+           package_count
+       ))
         saved_calculation_id = cursor.fetchone()[0]
 
         for item in item_snapshots:
