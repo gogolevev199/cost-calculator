@@ -56,6 +56,16 @@
                 {% endfor %}
             </select>
         </div>
+
+        <div class="form-group">
+            <label>Отсрочка оплаты (дней)</label>
+            <input type="number" name="finance_days" value="{{ finance_days }}">
+        </div>
+
+        <div class="form-group">
+            <label>Стоимость денег (% годовых)</label>
+            <input type="number" step="0.01" name="finance_rate" value="{{ finance_rate }}">
+        </div>
     </div>
 
     <button class="btn" type="submit">Пересчитать</button>
@@ -214,6 +224,10 @@
                 <td>{{ overhead_cost }}</td>
             </tr>
             <tr>
+                <th>Стоимость денег</th>
+                <td>{{ finance_cost }}</td>
+            </tr>
+            <tr>
                 <th>Итоговая себестоимость</th>
                 <td><strong>{{ total_cost }}</strong></td>
             </tr>
@@ -228,6 +242,8 @@
         <input type="hidden" name="packaging_type_id" value="{{ selected_packaging_type_id }}">
         <input type="hidden" name="customer_id" value="{{ selected_customer_id }}">
         <input type="hidden" name="transport_scheme_id" value="{{ selected_transport_scheme_id }}">
+        <input type="hidden" name="finance_days" value="{{ finance_days }}">
+        <input type="hidden" name="finance_rate" value="{{ finance_rate }}">
 
         <button class="btn" type="submit">
             Сохранить расчет

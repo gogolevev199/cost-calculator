@@ -433,11 +433,19 @@ CREATE TABLE IF NOT EXISTS saved_calculations (
     transport_cost_per_ton NUMERIC(18,2) NOT NULL DEFAULT 0,
     transport_cost_total NUMERIC(18,2) NOT NULL DEFAULT 0,
 
+
+    finance_days INTEGER NOT NULL DEFAULT 0,
+    finance_rate NUMERIC(18,4) NOT NULL DEFAULT 0,
+    finance_cost NUMERIC(18,2) NOT NULL DEFAULT 0,     
+
+
     direct_cost NUMERIC(18,2) NOT NULL DEFAULT 0,
     mixing_cost_total NUMERIC(18,2) NOT NULL DEFAULT 0,
     packaging_work_cost_total NUMERIC(18,2) NOT NULL DEFAULT 0,
     packaging_material_cost_total NUMERIC(18,2) NOT NULL DEFAULT 0,
     overhead_cost NUMERIC(18,2) NOT NULL DEFAULT 0,
+ 
+
     total_cost NUMERIC(18,2) NOT NULL DEFAULT 0,
     total_final_quantity NUMERIC(18,6) NOT NULL DEFAULT 0,
     package_count NUMERIC(18,6) NOT NULL DEFAULT 0,
@@ -473,6 +481,15 @@ ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id) ON DELETE SET
 
 ALTER TABLE saved_calculations
 ADD COLUMN IF NOT EXISTS customer_name_snapshot VARCHAR(255);
+
+ALTER TABLE saved_calculations
+ADD COLUMN IF NOT EXISTS finance_days INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE saved_calculations
+ADD COLUMN IF NOT EXISTS finance_rate NUMERIC(18,4) NOT NULL DEFAULT 0;
+
+ALTER TABLE saved_calculations
+ADD COLUMN IF NOT EXISTS finance_cost NUMERIC(18,2) NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS saved_calculation_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -1403,7 +1403,9 @@ def recipe_version_calculate_page(
     mixing_cost_per_ton: float = 0.0,
     packaging_type_id: str | None = None,
     customer_id: str | None = None,
-    transport_scheme_id: str | None = None
+    transport_scheme_id: str | None = None,
+    finance_days: int = 0,
+    finance_rate: float = 0.0
 ):
     with conn.cursor() as cursor:
         cursor.execute("""
@@ -1689,7 +1691,14 @@ def recipe_version_calculate_page(
         + transport_cost_total
     )
     overhead_cost = overhead_base * overhead_percent / 100.0
-    total_cost = overhead_base + overhead_cost
+
+    production_total = overhead_base + overhead_cost
+
+    finance_cost = 0.0
+    if finance_days > 0 and finance_rate > 0:
+        finance_cost = production_total * (finance_rate / 100.0) * (finance_days / 365.0)
+
+    total_cost = production_total + finance_cost
 
     return templates.TemplateResponse(
         request,
@@ -1709,6 +1718,8 @@ def recipe_version_calculate_page(
             "selected_transport_rate": selected_transport_rate,
             "overhead_percent": overhead_percent,
             "mixing_cost_per_ton": mixing_cost_per_ton,
+            "finance_days": finance_days,
+            "finance_rate": finance_rate,
             "direct_cost": round(direct_cost, 2),
             "mixing_cost_total": round(mixing_cost_total, 2),
             "packaging_work_cost_total": round(packaging_work_cost_total, 2),
@@ -1718,6 +1729,7 @@ def recipe_version_calculate_page(
             "transport_cost_per_ton": round(transport_cost_per_ton, 2),
             "transport_cost_total": round(transport_cost_total, 2),
             "overhead_cost": round(overhead_cost, 2),
+            "finance_cost": round(finance_cost, 2),
             "total_cost": round(total_cost, 2),
         }
     )
@@ -1839,7 +1851,9 @@ def save_recipe_version_calculation(
     mixing_cost_per_ton: float = Form(...),
     packaging_type_id: str = Form(""),
     customer_id: str = Form(""),
-    transport_scheme_id: str = Form("")
+    transport_scheme_id: str = Form(""),
+    finance_days: int = Form(0),
+    finance_rate: float = Form(0.0)
 ):
     with conn.cursor() as cursor:
         cursor.execute("""
@@ -2055,7 +2069,10 @@ def save_recipe_version_calculation(
             if capacity_tons and capacity_tons > 0:
                 transport_units_count = total_final_quantity / capacity_tons
                 transport_cost_total = transport_units_count * price
-                transport_cost_per_ton = transport_cost_total / total_final_quantity if total_final_quantity > 0 else 0.0
+                transport_cost_per_ton = (
+                    transport_cost_total / total_final_quantity
+                    if total_final_quantity > 0 else 0.0
+                )
 
     overhead_base = (
         direct_cost
@@ -2065,7 +2082,14 @@ def save_recipe_version_calculation(
         + transport_cost_total
     )
     overhead_cost = overhead_base * overhead_percent / 100.0
-    total_cost = overhead_base + overhead_cost
+
+    production_total = overhead_base + overhead_cost
+
+    finance_cost = 0.0
+    if finance_days > 0 and finance_rate > 0:
+        finance_cost = production_total * (finance_rate / 100.0) * (finance_days / 365.0)
+
+    total_cost = production_total + finance_cost
 
     with conn.cursor() as cursor:
         cursor.execute("""
@@ -2093,6 +2117,9 @@ def save_recipe_version_calculation(
                 transport_units_count,
                 transport_cost_per_ton,
                 transport_cost_total,
+                finance_days,
+                finance_rate,
+                finance_cost,
                 direct_cost,
                 mixing_cost_total,
                 packaging_work_cost_total,
@@ -2106,6 +2133,7 @@ def save_recipe_version_calculation(
                 %s,%s,%s,%s,%s,%s,%s,
                 %s,%s,%s,%s,%s,%s,%s,%s,
                 %s,%s,%s,%s,%s,%s,%s,%s,
+                %s,%s,%s,
                 %s,%s,%s,%s,%s,%s,%s,%s
             )
             RETURNING id
@@ -2133,6 +2161,9 @@ def save_recipe_version_calculation(
             transport_units_count,
             transport_cost_per_ton,
             transport_cost_total,
+            finance_days,
+            finance_rate,
+            finance_cost,
             direct_cost,
             mixing_cost_total,
             packaging_work_cost_total,
