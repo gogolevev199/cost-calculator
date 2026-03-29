@@ -1399,7 +1399,9 @@ def process_cost_create(
 def recipe_version_calculate_page(
     request: Request,
     version_id: str,
-    overhead_percent: float = 20.0
+    overhead_percent: float = 20.0,
+    mixing_cost_per_ton: float = 0.0,
+    packaging_type_id: str | None = None
 ):
     with conn.cursor() as cursor:
         cursor.execute("""
@@ -1430,6 +1432,43 @@ def recipe_version_calculate_page(
         }
 
         cursor.execute("""
+            SELECT id, name, capacity_value, capacity_unit, cost_per_ton, package_price
+            FROM packaging_types
+            WHERE is_active = TRUE
+            ORDER BY name
+        """)
+        packaging_rows = cursor.fetchall()
+
+        packaging_types = []
+        for p in packaging_rows:
+            packaging_types.append({
+                "id": p[0],
+                "name": p[1],
+                "capacity_value": float(p[2]) if p[2] is not None else None,
+                "capacity_unit": p[3],
+                "cost_per_ton": float(p[4]),
+                "package_price": float(p[5]),
+            })
+
+        selected_packaging = None
+        if packaging_type_id:
+            cursor.execute("""
+                SELECT id, name, capacity_value, capacity_unit, cost_per_ton, package_price
+                FROM packaging_types
+                WHERE id = %s
+            """, (packaging_type_id,))
+            p = cursor.fetchone()
+            if p:
+                selected_packaging = {
+                    "id": p[0],
+                    "name": p[1],
+                    "capacity_value": float(p[2]) if p[2] is not None else None,
+                    "capacity_unit": p[3],
+                    "cost_per_ton": float(p[4]),
+                    "package_price": float(p[5]),
+                }
+
+        cursor.execute("""
             SELECT
                 ri.id,
                 m.id,
@@ -1453,6 +1492,7 @@ def recipe_version_calculate_page(
 
     items = []
     direct_cost = 0.0
+    total_final_quantity = 0.0
 
     for row in item_rows:
         item_id = row[0]
@@ -1493,6 +1533,7 @@ def recipe_version_calculate_page(
         total_item_cost = material_cost + process_cost
 
         direct_cost += total_item_cost
+        total_final_quantity += final_quantity
 
         items.append({
             "material_name": material_name,
@@ -1506,8 +1547,33 @@ def recipe_version_calculate_page(
             "total_cost": round(total_item_cost, 2),
         })
 
-    overhead_cost = direct_cost * overhead_percent / 100.0
-    total_cost = direct_cost + overhead_cost
+    mixing_cost_total = total_final_quantity * mixing_cost_per_ton
+
+    packaging_work_cost_total = 0.0
+    packaging_material_cost_total = 0.0
+    package_count = 0.0
+
+    if selected_packaging:
+        packaging_work_cost_total = total_final_quantity * selected_packaging["cost_per_ton"]
+
+        capacity_value = selected_packaging["capacity_value"]
+        capacity_unit = selected_packaging["capacity_unit"]
+
+        if capacity_value and capacity_value > 0:
+            capacity_tons = None
+
+            if capacity_unit == "т":
+                capacity_tons = capacity_value
+            elif capacity_unit == "kg" or capacity_unit == "кг":
+                capacity_tons = capacity_value / 1000.0
+
+            if capacity_tons and capacity_tons > 0:
+                package_count = total_final_quantity / capacity_tons
+                packaging_material_cost_total = package_count * selected_packaging["package_price"]
+
+    overhead_base = direct_cost + mixing_cost_total + packaging_work_cost_total + packaging_material_cost_total
+    overhead_cost = overhead_base * overhead_percent / 100.0
+    total_cost = overhead_base + overhead_cost
 
     return templates.TemplateResponse(
         request,
@@ -1516,8 +1582,16 @@ def recipe_version_calculate_page(
             "recipe": recipe,
             "version": version,
             "items": items,
+            "packaging_types": packaging_types,
+            "selected_packaging_type_id": packaging_type_id,
+            "selected_packaging": selected_packaging,
             "overhead_percent": overhead_percent,
+            "mixing_cost_per_ton": mixing_cost_per_ton,
             "direct_cost": round(direct_cost, 2),
+            "mixing_cost_total": round(mixing_cost_total, 2),
+            "packaging_work_cost_total": round(packaging_work_cost_total, 2),
+            "packaging_material_cost_total": round(packaging_material_cost_total, 2),
+            "package_count": round(package_count, 3),
             "overhead_cost": round(overhead_cost, 2),
             "total_cost": round(total_cost, 2),
         }
