@@ -71,3 +71,12 @@ VALUES
     ('Хранение', 'storage', 'Временное хранение груза', TRUE),
     ('Страховка', 'insurance', 'Страхование перевозки', TRUE)
 ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO operations (name, code, operation_group, unit, is_active)
+VALUES
+    ('Смешивание', 'mixing', 'common', 'ton', TRUE),
+    ('Фасовка', 'packing', 'common', 'ton', TRUE),
+    ('Дробление', 'crushing', 'process', 'ton', TRUE),
+    ('Сушка', 'drying', 'process', 'ton', TRUE),
+    ('Помол', 'milling', 'process', 'ton', TRUE)
+ON CONFLICT DO NOTHING;

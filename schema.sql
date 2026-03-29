@@ -510,3 +510,57 @@ CREATE INDEX IF NOT EXISTS idx_saved_calculations_created_at
 
 CREATE INDEX IF NOT EXISTS idx_saved_calculation_items_calc_id
     ON saved_calculation_items(saved_calculation_id);
+
+CREATE TABLE IF NOT EXISTS operations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(100),
+    operation_group VARCHAR(50) NOT NULL DEFAULT 'process',
+    unit VARCHAR(50) NOT NULL DEFAULT 'ton',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_operations_name
+    ON operations(name);
+
+CREATE INDEX IF NOT EXISTS idx_operations_group
+    ON operations(operation_group);
+
+CREATE TABLE IF NOT EXISTS operation_cost_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    operation_id UUID NOT NULL REFERENCES operations(id) ON DELETE CASCADE,
+    cost NUMERIC(18,2) NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'RUB',
+    valid_from DATE NOT NULL,
+    valid_to DATE,
+    comment TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_operation_cost_history_operation_id
+    ON operation_cost_history(operation_id);
+
+CREATE INDEX IF NOT EXISTS idx_operation_cost_history_valid_from
+    ON operation_cost_history(valid_from);
+
+CREATE TABLE IF NOT EXISTS recipe_version_operations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    recipe_version_id UUID NOT NULL REFERENCES recipe_versions(id) ON DELETE CASCADE,
+    operation_id UUID NOT NULL REFERENCES operations(id) ON DELETE RESTRICT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    comment TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_recipe_version_operations_recipe_version_id
+    ON recipe_version_operations(recipe_version_id);
+
+CREATE INDEX IF NOT EXISTS idx_recipe_version_operations_operation_id
+    ON recipe_version_operations(operation_id);
+
+DROP TRIGGER IF EXISTS trg_operations_updated_at ON operations;
+CREATE TRIGGER trg_operations_updated_at
+BEFORE UPDATE ON operations
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
